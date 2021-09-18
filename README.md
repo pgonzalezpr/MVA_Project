@@ -10,4 +10,4 @@ This repository contains relevant documentation for the Multivariate Analysis co
 
 4. Analysis: The student group will perform a multivariate analysis of the training data set, leaving the test data as supplementary. As a group, you must discuss and choose which multivariate techniques are the more appropriate for your problem. Among other possible results, you must at least show a visualization of the information, detection of the hidden latent factors, the synthesis of the complexity by clustering, and interpretation of the results, which must be contextualized.
 
-5. Prediction: Depending on the undertaken problem, the student group will choose a model for prediction of the response variable, will find its optimal parameters, and will assess its performance according to the established validation protocol.
+5. Prediction: Depending on the undertaken problem, the student group will choose a model for prediction of the response variable, will find its optimal parameters, and will assess its performance according to the established validation protocol
