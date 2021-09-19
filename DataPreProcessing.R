@@ -2,11 +2,10 @@
 
 rm(list=ls(all=TRUE))
 
-# IMPORTING REQUIRED LIBRARIES #
+# IMPORTS #
 
 library(rstudioapi)
-library(tibble)
-library(dplyr)
+library(tidyverse)
 
 # SETTING WORKSPACE #
 
