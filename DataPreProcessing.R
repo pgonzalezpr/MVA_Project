@@ -12,16 +12,29 @@ library(tidyverse)
 current_path <- getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
 
-# LOADING DATASET AND ADDING ID COLUMN #
+# LOADING DATASET #
 
-rain_data <- read.csv("weatherAUSOriginal.csv")
-n <- nrow(rain_data)
-ID = c(1:n)
-new_rain_data <- add_column(rain_data, ID, .before=1)
+rain_data <- read_csv("weatherAUSOriginal.csv")
 
-# SAVING NEW DATASET #
+# DATE FORMATTING AND SUBSETTING #
 
-write.table(new_rain_data, file = "weatherAUS.csv", sep = ",", na = "NA", dec = ".", row.names = FALSE, col.names = TRUE)
+rain_data$Date <- as.Date(rain_data$Date)
+
+rain_data <- filter(rain_data, Date < "2013-06-02" & Location %in% c("Sydney","AliceSprings","Brisbane","Cairns","Perth","Moree"))
+
+# MISSING DATA #
+
+missing_stats <- colSums(is.na(rain_data))*100/nrow(rain_data)
+
+
+
+
+# ADDING ID COLUMN AND SAVING NEW DATASET #
+
+# ID = c(1:nrow(rain_data))
+# rain_data <- add_column(rain_data, ID, .before=1)
+# write.table(rain_data, file = "weatherAUS.csv", sep = ",", na = "NA", dec = ".", row.names = FALSE, col.names = TRUE)
+
 
 
 
