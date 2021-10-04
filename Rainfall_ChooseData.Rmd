@@ -1,0 +1,352 @@
+---
+title: "Rainfall_RMD"
+author: "Kat Weissman"
+date: "10/3/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+```{r}
+#PREPARE WORK DIRECTORY AND IMPORT DATASET
+setwd("~/Documents/MVA/Project")
+df <- read.csv("weatherAUS.csv")
+```
+
+```{r, results='hide'}
+#Load Libraries
+library(dplyr)
+```
+
+## Checking variables
+
+```{r}
+#LIST VARIABLES
+str(df)
+```
+
+## Changing variable types
+
+The Date variable should be changed to type Date.
+The Location and Wind Direction variables should be changed to factors.
+I will also set RainToday and RainTomorrow as factors.
+
+```{r}
+#CHANGE VARIABLE TYPES
+df$Date <- as.Date(df$Date)
+df$Location <- as.factor(df$Location)
+df$WindGustDir <- as.factor(df$WindGustDir)
+df$WindDir9am <- as.factor(df$WindDir9am)
+df$WindDir3pm <- as.factor(df$WindDir3pm)
+df$RainToday <- as.factor(df$RainToday)
+df$RainTomorrow <- as.factor(df$RainTomorrow)
+```
+
+## Adding Year, Month, Day Columns
+
+In order to use some of the algorithms, the date will be better interpreted
+as Year, Month, and Day of month.
+
+````{r}
+df[, "Year"] <- as.factor(format(df[,"Date"], "%Y"))
+df[, "Month"] <- as.factor(format(df[,"Date"], "%B"))
+df[, "Day"] <- as.integer(format(df[,"Date"], "%d"))
+df <- df %>% relocate(c("Year","Month","Day"), .after = "Date")
+```
+
+
+## Splitting Data
+
+A different project team in Group 12 chose the same data set, so this team will
+work with the first half of the data set, divided by date, as instructed by
+the lab professor on 27-Sep-2021.
+
+We will use the median date to split the data set and keep the first half.
+
+```{r}
+#SUBSET DATA BY MEDIAN DATE
+df <- subset(df, Date < median(df$Date))
+```
+
+## Summary Statistics
+
+```{r}
+#SUMMARIZE DATA BY COLUMN
+summary(df)
+```
+
+
+* Date: date of the observation. 
+* Location: common name for the weather station location. 
+* MinTemp: minimum temperature in the 24 hours to 9am, degrees Celsius.
+* MaxTemp: maximum temperature in the 24 hours from 9am, degrees Celsius.
+* Rainfall: rainfall in the 24 hours to 9am, millimeters. 
+* Evaporation: "Class A" pan evaporation in the 24 hours to 9am, millimeters.
+* Sunshine: number of hours of bright sunshine in the 24 hours to midnight.
+* WindGustDir: direction of the strongest wind gust in the 24 hours to midnight, 
+measured with 16 compass points.  
+* WindGustSpeed: speed of strongest wind gust in the 24 hours to midnight, km/h.
+* WindDir9am: wind direction  at 9am, measured with 16 compass points. 
+* WindDir3pm: wind direction at 3pm, measured with 16 compass points. 
+* WindSpeed9am: average wind speed over the 10-minute period prior to 9am, km/h.
+* WindSpeed3pm: average wind speed over the 10-minute period prior to 3pm, km/h.
+* Humidity9am: relative humidity percentage at 9am. 
+* Humidity3pm: relative humidity percentage at 3pm.
+* Pressure9am:  atmospheric pressure (hpa) reduced to mean sea level at 9am.
+* Pressure3pm: atmospheric pressure (hpa) reduced to mean sea level at 3pm.
+* Cloud9am: fraction of sky obscured by cloud at 9am, measured in oktas, a unit 
+of eights that describes the amount of cloud cover at any given location such 
+as a weather station, ranging from 0 (completely clear sky) 
+to 8 (completely covered sky). Value 9 (sky obstructed from view)
+https://en.wikipedia.org/wiki/Okta
+* Cloud3pm: fraction of sky obscured by cloud at 3pm, measured in oktas.
+* Temp9am: temperature at 9am, degrees Celsius. 
+* Temp3pm: temperature at 3pm, degrees Celsius.
+* RainToday: boolean variable; Yes if precipitation (mm) in the 24 hours to 
+9am exceeds 1 mm, otherwise No. 
+* RainTomorrow: boolean variable; Yes if the following day precipitation 
+exceeds 1 mm, otherwise No.
+
+
+## Detecting Missing Values
+
+```{r}
+#Display a table that shows the number of rows with a certain number of NA's
+mis_ind = rowSums(is.na(df))
+table(mis_ind)
+```
+
+```{r}
+#Plot the distribution of the number of NA's per row
+hist(mis_ind)
+```
+
+In order to build the model, observations should be removed that are missing
+too much data. Observations that have NA values above the 90th percentile of
+the NA count distribution should be removed.
+
+```{r}
+#Check 90th percentile of missing data and save value to variable
+rm_NA <- quantile(mis_ind,0.90)
+```
+
+We should remove observations with more than 6 NA values.
+
+```{r}
+#Creates an index and data frame of observations that have missing data
+#above the cut-off threshold.
+m1 <- which(mis_ind > rm_NA)
+df_remove1 <- df[m1,]
+
+#Removes observations with too many NA's from data frame used for modeling
+df <- df[-c(m1),]
+```
+
+
+```{r}
+#Summarizes the number of NA's per variable.
+mis_col = colSums(is.na(df))
+mis_col
+```
+
+```{r}
+#Check number of unique locations and summary
+num_unique_locations <- length(unique(df$Location))
+summary(df$Location)
+plot(df$Location)
+
+#Check number of observations below the 10% quantile 
+rm_Loc <- quantile(summary(df$Location),0.1)
+```
+
+Locations with less than 1101 observations will be removed since they are
+below the 10th percentile of number of recorded observations.
+
+```{r}
+#Creates an index and data frame of Locations that have missing data
+#below the cut-off threshold.
+m2 <- which(summary(df$Location) < rm_Loc)
+loc_remove <- levels(df$Location)[c(m2)]
+df_remove2 <- subset(df,Location %in% c(loc_remove))
+
+#REMOVE OBSERVATIONS FROM SPECIFIC LOCATIONS
+df <- subset(df,!Location %in% c(loc_remove))
+```
+
+5 locations were removed from the data set because of too few observations.
+They were Katherine, MountGinini, Newcastle, Nhil, and Uluru.
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates <- length(unique(df$Date))
+time_difference <- as.numeric((max(df$Date)-min(df$Date)), units="days")
+total_years <- time_difference/365
+```
+
+There are weather observations for 1951 unique dates across 44 unique locations 
+over the time span of approximately 5.5 years.
+
+```{r}
+#CALCULATE NUMBER OF MISSING DATES
+num_missing_dates <- time_difference - num_unique_dates
+```
+
+There are 1951 unique dates in the data set, however there is a difference of
+2039 days between the first observation and the last observation, which means
+there are 88 dates missing in the time span.
+
+
+## Choosing Locations to Model
+
+Due to the geographic dependencies of the rainfall model, and the amount of data
+included in the data set, we will reduce the amount of data by keeping only
+specific locations. We would like to model locations from different climate 
+zones that are spread apart geographically and have higher variability in 
+rainfall. 
+
+```{r}
+#SUMMARIZE RAINFALL BY LOCATION
+df_rainfall <- summarise(group_by(df, Location), 
+                         Mean_rainfall = mean(Rainfall, na.rm = TRUE),
+                         SD_rainfall=sd(Rainfall, na.rm = TRUE))
+df_rainfall[with(df_rainfall, order(SD_rainfall, decreasing = TRUE)),]
+```
+The Australian government has identified 8 climate zones.
+
+We will keep Cairns, Brisbane, Sydney with SydneyAirport, Moree, 
+Perth with PerthAirport, and AliceSprings.
+
+* Cairns - Climate Zone 1
+* Brisbane - Climate Zone 2
+* Alice Springs - Climate Zone 3
+* Moree - Climate Zone 4
+* Perth - Climate Zone 5
+* Sydney - Climate Zone 5/6
+
+```{r}
+#CREATE DATAFRAME OF CHOSEN LOCATIONS
+loc_keep <- c("Cairns","Brisbane","AliceSprings","Moree","Perth",
+              "PerthAirport","Sydney","SydneyAirport")
+df_remove3 <- subset(df,!Location %in% c(loc_keep))
+df <- subset(df,Location %in% c(loc_keep))
+```
+
+## Summary Statistics for Chosen Locations
+
+```{r}
+#SUMMARIZE DATA BY COLUMN
+summary(df)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates <- length(unique(df$Date))
+time_difference <- as.numeric((max(df$Date)-min(df$Date)), units="days")
+total_years <- time_difference/365
+num_unique_locations <- length(unique(df$Location))
+```
+
+Using the filtered data set, there are weather observations for 1859 unique 
+dates across 8 unique locations over the time span of approximately 5.3 years.
+
+```{r}
+#CALCULATE NUMBER OF MISSING DATES
+num_missing_dates <- time_difference - num_unique_dates
+```
+
+There are 1859 unique dates in the data set, however there is a difference of
+1947 days between the first observation and the last observation, which means
+there are still 88 dates missing in the time span.
+
+## Detecting Missing Values for Chosen Locations
+
+```{r}
+#Display a table that shows the number of rows with a certain number of NA's
+mis_ind = rowSums(is.na(df))
+table(mis_ind)
+```
+
+```{r}
+#Plot the distribution of the number of NA's per row
+hist(mis_ind)
+```
+```{r}
+#Summarizes the number of NA's per variable.
+mis_col = colSums(is.na(df))
+mis_col
+```
+
+
+```{r}
+#Summarizes the number of NA's per variable as percentage.
+mis_col_percent <- round((mis_col/nrow(df)*100), digits = 2)
+mis_col_percent
+```
+
+## Splitting Data by Locations
+
+```{r}
+df_Cairns <- subset(df,Location == "Cairns")
+df_Brisbane <- subset(df,Location == "Brisbane")
+df_AliceSprings <- subset(df,Location == "AliceSprings")
+df_Moree <- subset(df,Location == "Moree")
+df_Perth <- subset(df,Location %in% c("Perth","PerthAirport"))
+df_Sydney <- subset(df,Location %in% c("Sydney","SydneyAirport"))
+
+```
+
+## Summarizing Data & NA's by Location
+
+### Cairns
+
+```{r}
+summary(df_Cairns)
+````
+````{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Cairns <- length(unique(df_Cairns$Date))
+time_difference_Cairns <- as.numeric((max(df_Cairns$Date)-min(df_Cairns$Date)), units="days")
+total_years_Cairns <- time_difference/365
+num_missing_dates_Cairns <- time_difference_Cairns - num_unique_dates_Cairns
+num_missing_dates_Cairns
+````
+
+### Brisbane
+
+```{r}
+summary(df_Brisbane)
+````
+
+````{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Brisbane <- length(unique(df_Brisbane$Date))
+time_difference_Brisbane <- as.numeric((max(df_Brisbane$Date)-min(df_Brisbane$Date)), units="days")
+total_years_Brisbane <- time_difference/365
+num_missing_dates_Brisbane <- time_difference_Brisbane - num_unique_dates_Brisbane
+num_missing_dates_Brisbane
+````
+
+### Alice Springs
+
+```{r}
+summary(df_AliceSprings)
+````
+
+````{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Alice <- length(unique(df_AliceSprings$Date))
+time_difference_Alice <- as.numeric((max(df_AliceSprings$Date)-min(df_AliceSprings$Date)), units="days")
+total_years_Alice <- time_difference/365
+num_missing_dates_Alice <- time_difference_Alice - num_unique_dates_Alice
+num_missing_dates_Alice
+````
