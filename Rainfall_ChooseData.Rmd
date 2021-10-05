@@ -18,8 +18,16 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
 
 ```{r}
+
+# CLEARING ENVIRONMENT #
+
+rm(list=ls(all=TRUE))
+
+
 #PREPARE WORK DIRECTORY AND IMPORT DATASET
-setwd("~/Documents/MVA/Project")
+current_path <- getActiveDocumentContext()$path 
+setwd(dirname(current_path ))
+
 df <- read.csv("weatherAUS.csv")
 ```
 
