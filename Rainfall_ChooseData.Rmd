@@ -39,11 +39,6 @@ sapply(pkgs,require,character=TRUE)
 
 rm(list=ls(all=TRUE))
 
-# LIBRARIES 
-
-library(dplyr)
-library(rstudioapi)
-
 #PREPARE WORK DIRECTORY AND IMPORT DATASET
 
 current_path <- getActiveDocumentContext()$path 
@@ -53,7 +48,6 @@ df <- read.csv("weatherAUSOriginal.csv", stringsAsFactors = T)
 ```
 # Problem statement and selected dataset 
 
-<<<<<<< HEAD
 This project seeks to develop, train and evaluate a statistical model that helps end-users make predictions about whether or not there will be rainfall the following day, given the weather conditions on a given day in Australia. In addition, several multivariate techniques will be implemented in order to extract key insights and relevant information from the available historical data. A better understanding of the factors influencing rainfall in Australia and how these may have changed over time given the harsh climate changes the territory has experienced in the last decade may be of use to predict future droughts and wildfire crises. 
 
 The main data set was obtained from the repository at [Kaggle.com][1]. This data set is built using publicly available climate data, provided by the [Australian Bureau of Meteorology][2] and measured by weather stations distributed across the country. It contains more than 100,000 daily weather observations over a 10-year period from 2007 to 2017 from 49 unique locations in Australia. These observations include temperature, rainfall, atmospheric pressure, evaporation, humidity, wind direction, and wind speed at different times during the day.  More specifically, the dataset contains 24 columns in total. Columns 1 through 21 are defined by the [Australian Government Bureau of Meteorology][2]: 
@@ -83,8 +77,6 @@ measured with 16 compass points.
 22. **RainToday**: boolean variable; Yes if precipitation (mm) in the 24 hours to 9am exceeds 1 mm, otherwise No. 
 23. **RainTomorrow**: boolean variable; Yes if the following day precipitation exceeds 1 mm, otherwise No. 
 =======
-```{r, results='hide'}```
->>>>>>> a74839c4f70fead1adb9073e3948a2f5cac31335
 
 ## Checking variables
 
@@ -141,7 +133,6 @@ summary(df)
 ```
 
 
-
 ## Detecting Missing Values
 
 ```{r}
@@ -155,27 +146,17 @@ table(mis_ind)
 hist(mis_ind)
 ```
 
-In order to build the model, observations should be removed that are missing
+In order to build the model, we consider removing observations that are missing
 too much data. Observations that have NA values above the 90th percentile of
-the NA count distribution should be removed.
+the NA count distribution could be removed, but for now we will keep them.
 
 ```{r}
 #Check 90th percentile of missing data and save value to variable
-rm_NA <- quantile(mis_ind,0.90)
+quantile(mis_ind,0.90)
 ```
 
-We should remove observations with more than 6 NA values.
-
-```{r}
-#Creates an index and data frame of observations that have missing data
-#above the cut-off threshold.
-m1 <- which(mis_ind > rm_NA)
-df_remove1 <- df[m1,]
-
-#Removes observations with too many NA's from data frame used for modeling
-df <- df[-c(m1),]
-```
-
+We could consider removing observations with more than 6 NA values if there
+is not a good imputation method.
 
 ```{r}
 #Summarizes the number of NA's per variable.
@@ -188,27 +169,12 @@ mis_col
 num_unique_locations <- length(unique(df$Location))
 summary(df$Location)
 plot(df$Location)
-
-#Check number of observations below the 10% quantile 
-rm_Loc <- quantile(summary(df$Location),0.1)
 ```
 
-Locations with less than 1101 observations will be removed since they are
-below the 10th percentile of number of recorded observations.
+Locations have different numbers of recorded observations, which could indicate
+that they started recording measurements at different points in time.
 
-```{r}
-#Creates an index and data frame of Locations that have missing data
-#below the cut-off threshold.
-m2 <- which(summary(df$Location) < rm_Loc)
-loc_remove <- levels(df$Location)[c(m2)]
-df_remove2 <- subset(df,Location %in% c(loc_remove))
-
-#REMOVE OBSERVATIONS FROM SPECIFIC LOCATIONS
-df <- subset(df,!Location %in% c(loc_remove))
-```
-
-5 locations were removed from the data set because of too few observations.
-They were Katherine, MountGinini, Newcastle, Nhil, and Uluru.
+3 locations have very few observations which are Katherine, Nhil, and Uluru.
 
 ```{r}
 #CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
@@ -227,7 +193,7 @@ num_missing_dates <- time_difference - num_unique_dates
 
 There are 1951 unique dates in the data set, however there is a difference of
 2039 days between the first observation and the last observation, which means
-there are 88 dates missing in the time span.
+there are 88 dates missing in the time span. 
 
 
 ## Choosing Locations to Model
