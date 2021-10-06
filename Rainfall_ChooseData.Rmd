@@ -1,10 +1,21 @@
 ---
-title: "Rainfall_RMD"
-author: "Kat Weissman"
-date: "10/3/2021"
+title: "Group 1: Multivariate analysis of australian climate data"
+author:  "Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo González, Mateo Jácome González y Pedro González Prado"
+date: "`r Sys.Date()`"
 output:
-  pdf_document: default
-  html_document: default
+  html_notebook:
+   toc: true
+   toc_depth: 2
+   toc_float: true
+   theme: cerulean
+   highlight: tango
+   #collapsed: false
+   #smooth_scroll: false
+   number_sections: true
+   
+#theme: readable
+#highlight: success #https://bootswatch.com/3/
+#subtitle: Report
 ---
 
 ```{r setup, include=FALSE}
