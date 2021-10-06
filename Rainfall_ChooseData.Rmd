@@ -39,8 +39,13 @@ sapply(pkgs,require,character=TRUE)
 
 rm(list=ls(all=TRUE))
 
+# LIBRARIES 
+
+library(dplyr)
+library(rstudioapi)
 
 #PREPARE WORK DIRECTORY AND IMPORT DATASET
+
 current_path <- getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
 
@@ -48,6 +53,7 @@ df <- read.csv("weatherAUSOriginal.csv", stringsAsFactors = T)
 ```
 # Problem statement and selected dataset 
 
+<<<<<<< HEAD
 This project seeks to develop, train and evaluate a statistical model that helps end-users make predictions about whether or not there will be rainfall the following day, given the weather conditions on a given day in Australia. In addition, several multivariate techniques will be implemented in order to extract key insights and relevant information from the available historical data. A better understanding of the factors influencing rainfall in Australia and how these may have changed over time given the harsh climate changes the territory has experienced in the last decade may be of use to predict future droughts and wildfire crises. 
 
 The main data set was obtained from the repository at [Kaggle.com][1]. This data set is built using publicly available climate data, provided by the [Australian Bureau of Meteorology][2] and measured by weather stations distributed across the country. It contains more than 100,000 daily weather observations over a 10-year period from 2007 to 2017 from 49 unique locations in Australia. These observations include temperature, rainfall, atmospheric pressure, evaporation, humidity, wind direction, and wind speed at different times during the day.  More specifically, the dataset contains 24 columns in total. Columns 1 through 21 are defined by the [Australian Government Bureau of Meteorology][2]: 
@@ -76,6 +82,9 @@ measured with 16 compass points.
 21. **Temp3pm**: temperature at 3pm, measured in degree celsius.
 22. **RainToday**: boolean variable; Yes if precipitation (mm) in the 24 hours to 9am exceeds 1 mm, otherwise No. 
 23. **RainTomorrow**: boolean variable; Yes if the following day precipitation exceeds 1 mm, otherwise No. 
+=======
+```{r, results='hide'}```
+>>>>>>> a74839c4f70fead1adb9073e3948a2f5cac31335
 
 ## Checking variables
 
