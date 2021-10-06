@@ -23,18 +23,20 @@ When you click the **Knit** button a document will be generated that includes bo
 
 rm(list=ls(all=TRUE))
 
+# LIBRARIES 
+
+library(dplyr)
+library(rstudioapi)
 
 #PREPARE WORK DIRECTORY AND IMPORT DATASET
+
 current_path <- getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
 
 df <- read.csv("weatherAUS.csv")
 ```
 
-```{r, results='hide'}
-#Load Libraries
-library(dplyr)
-```
+```{r, results='hide'}```
 
 ## Checking variables
 
