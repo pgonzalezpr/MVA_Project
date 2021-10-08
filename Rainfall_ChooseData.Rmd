@@ -97,9 +97,11 @@ and Day of month, so columns are added for these variables.
 #CHANGE VARIABLE TYPE
 df$Date <- as.Date(df$Date)
 
-###TO DO: Add ID column
+#Add ID column
+ID = c(1:nrow(df))
+df <- add_column(df, ID, .before=1)
 
-###TO DO: SET LEVELS FOR WIND DIRECTION
+###TO DO: SET LEVELS FOR WIND DIRECTION - MATEO
 
 #df$WindGustDir <- 
 #df$WindDir9am <- 
@@ -132,8 +134,69 @@ df <- subset(df, Date < median(df$Date))
 summary(df)
 ```
 
+```{r , message=FALSE, results='asis',fig.align = 'center'}
+###TO DO: COMMENT CODE - DIANA
+
+nums <- unlist(lapply(df, is.numeric)) 
+numrain_data<-df[ , nums]
+numrain_data<-subset(numrain_data,complete.cases(numrain_data))
+a<-names(numrain_data)
+a<-as.list(a)
+
+fun02<-function(i){index=grep(i,names(numrain_data))
+                   bw <- nclass.Sturges(numrain_data[,index]) # Freedman-Diaconis
+                   nm=paste0(i)
+                   assign(paste("g",i,sep=""),
+                   ggplot(numrain_data, aes(numrain_data[,index])) +  
+                   geom_histogram(bins = bw,aes(y=..density..), fill="#de2d26") +
+                   geom_density(alpha=.35, fill="#08519c",color = NA)  +
+                   geom_vline (aes(xintercept=median(numrain_data[,index])),color="#08519c", size=1) + 
+                   labs(title=nm, x=NULL, y="UPAS")) +
+                   theme(plot.title = element_text(size = rel(0.7),face ="bold",hjust = 0.5),
+                        axis.title.y = element_text(size = rel(0.4)),
+                        axis.text = element_text(size = rel(0.4)))
+                   }
+Histos<-lapply(a[-1],fun02)
+do.call(grid.arrange, Histos)
+```
+```{r , message=FALSE,fig.align = 'center'}
+# Initial correlation matrix
+cor_org<-cor(numrain_data)
+
+###TO DO - ADD MISSING LIBRARY TO AVOID WARNING
+###TO DO - FIX COLOR SCALE
+# Interactive correlation matrix
+heatmaply(round(cor_org, 2),symm=TRUE,colors="RdGy",revC=TRUE,dendrogram="none",cexRow=0.6,cexCol=0.6, main="Correlation matrix")
+```
+
+The dataset selected covers the cities presented in the map:
+
+```{r message=FALSE, results="hide", fig.align = 'center'}
+
+####TO DO: COMMENT CODE & UPLOAD .SHP FILES TO GITHUB - DIANA
+
+# #dirshpcities<-paste0(dirname(current_path),"/Cities.shp")
+# shapecities <- st_read(paste0(dirname(current_path),"/Cities.shp"))
+# shaperegions <- st_read(paste0(dirname(current_path),"/GCCSA_2021_AUST_GDA2020.shp"))
+# 
+# ggplot(data = shaperegions) +
+#     geom_sf(aes(fill = '#d6604d')) + 
+#     geom_sf(data = shapecities, size = 3, shape = 19, fill = "#4d4d4d")
+
+```
 
 ## Detecting Missing Values
+
+```{r missingdatagraphs}
+
+missing_stats <- colSums(is.na(df))*100/nrow(df)
+
+# Graph
+vis_miss(df, warn_large_data = F)
+
+aggr(df, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+
+```
 
 ```{r}
 #Display a table that shows the number of rows with a certain number of NA's
@@ -151,7 +214,7 @@ too much data. Observations that have NA values above the 90th percentile of
 the NA count distribution could be removed, but for now we will keep them.
 
 ```{r}
-#Check 90th percentile of missing data and save value to variable
+#Check 90th percentile of missing data points per row
 quantile(mis_ind,0.90)
 ```
 
@@ -171,10 +234,12 @@ summary(df$Location)
 plot(df$Location)
 ```
 
-Locations have different numbers of recorded observations, which could indicate
-that they started recording measurements at different points in time.
+There are 49 unique locations, and most have different numbers of recorded 
+observations, which could indicate that they started recording measurements at 
+different points in time or are missing observations for some dates.
 
-3 locations have very few observations which are Katherine, Nhil, and Uluru.
+3 locations have very few observations compared to the rest which are Katherine, 
+Nhil, and Uluru.
 
 ```{r}
 #CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
@@ -183,8 +248,8 @@ time_difference <- as.numeric((max(df$Date)-min(df$Date)), units="days")
 total_years <- time_difference/365
 ```
 
-There are weather observations for 1951 unique dates across 44 unique locations 
-over the time span of approximately 5.5 years.
+There are weather observations for 1951 unique dates over the time span of 
+approximately 5.5 years.
 
 ```{r}
 #CALCULATE NUMBER OF MISSING DATES
@@ -194,6 +259,7 @@ num_missing_dates <- time_difference - num_unique_dates
 There are 1951 unique dates in the data set, however there is a difference of
 2039 days between the first observation and the last observation, which means
 there are 88 dates missing in the time span. 
+
 
 
 ## Choosing Locations to Model
@@ -230,6 +296,15 @@ loc_keep <- c("Cairns","Brisbane","AliceSprings","Moree","Perth",
 df_remove3 <- subset(df,!Location %in% c(loc_keep))
 df <- subset(df,Location %in% c(loc_keep))
 ```
+
+Question to Diana: Does the map go here or at the beginning?
+
+Question to the team: From this point forward, I think it could be better to 
+give each location its own .Rmd file??? - Kat
+
+Question to the team: It may be worth creating separate code files for
+the series of functions we need to call on each location, and then we can
+reference those code files in order to call the functions within each Rmd file.- Kat
 
 ## Summary Statistics for Chosen Locations
 
