@@ -295,6 +295,9 @@ loc_keep <- c("Cairns","Brisbane","AliceSprings","Moree","Perth",
               "PerthAirport","Sydney","SydneyAirport")
 df_remove3 <- subset(df,!Location %in% c(loc_keep))
 df <- subset(df,Location %in% c(loc_keep))
+
+#WRITE .CSV FILE OF CHOSEN LOCATIONS
+write.csv(df,'df_chosen_locations.csv')
 ```
 
 Question to Diana: Does the map go here or at the beginning?
@@ -305,6 +308,26 @@ give each location its own .Rmd file??? - Kat
 Question to the team: It may be worth creating separate code files for
 the series of functions we need to call on each location, and then we can
 reference those code files in order to call the functions within each Rmd file.- Kat
+
+## Splitting Data by Locations
+
+```{r}
+#CREATE DATAFRAME FOR EACH SELECTED CITY
+df_Cairns <- subset(df,Location == "Cairns")
+df_Brisbane <- subset(df,Location == "Brisbane")
+df_AliceSprings <- subset(df,Location == "AliceSprings")
+df_Moree <- subset(df,Location == "Moree")
+df_Perth <- subset(df,Location %in% c("Perth","PerthAirport"))
+df_Sydney <- subset(df,Location %in% c("Sydney","SydneyAirport"))
+
+#WRITE .CSV FILE FOR EACH SELECTED CITY
+write.csv(df_Cairns,'df_Cairns.csv')
+write.csv(df_Brisbane,'df_Brisbane.csv')
+write.csv(df_AliceSprings,'df_AliceSprings.csv')
+write.csv(df_Moree, 'df_Moree.csv')
+write.csv(df_Perth, 'df_Perth.csv')
+write.csv(df_Sydney, 'df_Sydney.csv')
+```
 
 ## Summary Statistics for Chosen Locations
 
@@ -358,17 +381,7 @@ mis_col_percent <- round((mis_col/nrow(df)*100), digits = 2)
 mis_col_percent
 ```
 
-## Splitting Data by Locations
 
-```{r}
-df_Cairns <- subset(df,Location == "Cairns")
-df_Brisbane <- subset(df,Location == "Brisbane")
-df_AliceSprings <- subset(df,Location == "AliceSprings")
-df_Moree <- subset(df,Location == "Moree")
-df_Perth <- subset(df,Location %in% c("Perth","PerthAirport"))
-df_Sydney <- subset(df,Location %in% c("Sydney","SydneyAirport"))
-
-```
 
 ## Summarizing Data & NA's by Location
 
