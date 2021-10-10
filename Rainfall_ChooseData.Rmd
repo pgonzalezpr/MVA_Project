@@ -165,8 +165,14 @@ cor_org<-cor(numrain_data)
 
 ###TO DO - ADD MISSING LIBRARY TO AVOID WARNING
 ###TO DO - FIX COLOR SCALE
+
 # Interactive correlation matrix
-heatmaply(round(cor_org, 2),symm=TRUE,colors="RdGy",revC=TRUE,dendrogram="none",cexRow=0.6,cexCol=0.6, main="Correlation matrix")
+col <- colorRampPalette(c("#990909", "#d17664", "#FFFFFF", "#77AADD", "#032f96"))
+heatmaply(round(cor_org, 2),symm=TRUE,col=col(200),limits=c(-1,1),revC=TRUE,dendrogram="none",cexRow=0.8,cexCol=0.8,main="Correlation matrix")
+
+# Alternative graph (used in lab 2)
+# library(corrplot)
+# corrplot(cor_org, method = "color",number.cex = 1, title='Correlation matrix', mar=c(0,0,1,0), tl.col="black", tl.cex = 0.8)
 ```
 
 The dataset selected covers the cities presented in the map:
