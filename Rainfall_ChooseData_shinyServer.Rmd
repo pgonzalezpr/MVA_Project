@@ -1,0 +1,679 @@
+---
+title: 'Group 1: Multivariate analysis of australian climate data'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo González, Mateo Jácome
+  González y Pedro González Prado
+date: "`r Sys.Date()`"
+output:
+#  pdf_document:
+#    toc: yes
+#    toc_depth: '2'
+#  html_notebook:
+#    toc: yes
+#    toc_depth: 2
+#    toc_float: yes
+#    theme: cerulean
+#    highlight: tango
+#    number_sections: yes
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+runtime: shiny
+---
+```{r setup, include=FALSE, results='hide'}
+#rm(list=ls(all=TRUE))
+
+#INSTALL & LOAD LIBRARIES
+# Required packages
+pkgs<-c("rstudioapi","tidyverse","DT","naniar","tidyr","sf","ggplot","ggplot2","cowplot", "googleway", "ggplot2", "ggrepel", "VIM","ggspatial", "libwgeom", "sf", "rnaturalearth", "rnaturalearthdata","gridExtra","grid","ggplot2","lattice","FactoMineR","factoextra","corplot","heatmaply", "fmsb")
+
+# Non-installed packages
+#inspkgs<-pkgs[!pkgs %in% installed.packages()]
+#for(libs in inspkgs) install.packages(libs)
+
+# Loading required
+sapply(pkgs,require,character=TRUE)
+
+#("ade4","corrplot","factoextra","FactoMineR","foreign","ggplot2","gridExtra","Hmisc","RColorBrewer","reshape2","RPostgreSQL","knitr","openxlsx","NbClust","DT","d3heatmap","heatmaply","sf","viridis","leaflet","pander","VIM","plotly")
+```
+```{r}
+
+# CLEARING ENVIRONMENT #
+
+rm(list=ls(all=TRUE))
+
+#PREPARE WORK DIRECTORY AND IMPORT DATASET
+
+#current_path <- getActiveDocumentContext()$path 
+#setwd(dirname(current_path ))
+
+df <- read.csv("weatherAUSOriginal.csv", stringsAsFactors = T)
+```
+# Problem statement and selected dataset 
+
+This project seeks to develop, train and evaluate a statistical model that helps end-users make predictions about whether or not there will be rainfall the following day, given the weather conditions on a given day in Australia. In addition, several multivariate techniques will be implemented in order to extract key insights and relevant information from the available historical data. A better understanding of the factors influencing rainfall in Australia and how these may have changed over time given the harsh climate changes the territory has experienced in the last decade may be of use to predict future droughts and wildfire crises. 
+
+The main data set was obtained from the repository at [Kaggle.com][1]. This data set is built using publicly available climate data, provided by the [Australian Bureau of Meteorology][2] and measured by weather stations distributed across the country. It contains more than 100,000 daily weather observations over a 10-year period from 2007 to 2017 from 49 unique locations in Australia. These observations include temperature, rainfall, atmospheric pressure, evaporation, humidity, wind direction, and wind speed at different times during the day.  More specifically, the dataset contains 24 columns in total. Columns 1 through 21 are defined by the [Australian Government Bureau of Meteorology][2]: 
+
+1. **Date**: date of the observation. 
+2. **Location**: common name for the weather station location. 
+3. **MinTemp**: minimum temperature in the 24 hours to 9am, degrees Celsius.
+4. **MaxTemp**: maximum temperature in the 24 hours from 9am, degrees Celsius.
+5. **Rainfall**: rainfall in the 24 hours to 9am, millimeters. 
+6. **Evaporation**: "Class A" pan evaporation in the 24 hours to 9am, millimeters.
+7. **Sunshine**: number of hours of bright sunshine in the 24 hours to midnight.
+8. **WindGustDir**: direction of the strongest wind gust in the 24 hours to midnight, 
+measured with 16 compass points.  
+9. **WindGustSpeed**: speed of strongest wind gust in the 24 hours to midnight, km/h.
+10. **WindDir9am**: wind direction  at 9am, measured with 16 compass points. 
+11. **WindDir3pm**: wind direction at 3pm, measured with 16 compass points. 
+12. **WindSpeed9am**: average wind speed over the 10-minute period prior to 9am, km/h.
+13. **WindSpeed3pm**: average wind speed over the 10-minute period prior to 3pm, km/h.
+14. **Humidity9am**: relative humidity percentage at 9am. 
+15. **Humidity3pm**: relative humidity percentage at 3pm.
+16. **Pressure9am**:  atmospheric pressure (hpa) reduced to mean sea level at 9am.
+17. **Pressure3pm**: atmospheric pressure (hpa) reduced to mean sea level at 3pm.
+18. **Cloud9am**: fraction of sky obscured by cloud at 9am, measured in oktas, a unit of eights that describes the amount of cloud cover at any given location such as a weather station, ranging from 0 (completely clear sky) to 8 (completely covered sky). Value 9 (sky obstructed from view) https://en.wikipedia.org/wiki/Okta 
+19. **Cloud3pm**: fraction of sky obscured by cloud at 3pm, measured in oktas.
+20. **Temp9am**: temperature at 9am, measured in degree celsius. 
+21. **Temp3pm**: temperature at 3pm, measured in degree celsius.
+22. **RainToday**: boolean variable; Yes if precipitation (mm) in the 24 hours to 9am exceeds 1 mm, otherwise No. 
+23. **RainTomorrow**: boolean variable; Yes if the following day precipitation exceeds 1 mm, otherwise No. 
+=======
+
+## Checking variables
+
+```{r}
+#LIST VARIABLES
+str(df)
+```
+
+## Updating Variables
+
+For convenience, the project team adds an ID variable and defines the levels
+of wind direction based on clockwise orientation of the compass points. The
+Date variable is also formatted as a date. In order to use some of the data 
+analysis algorithms, the date will be better interpreted as Year, Month, 
+and Day of month, so columns are added for these variables.
+
+```{r}
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+#Add ID column
+ID = c(1:nrow(df))
+df <- add_column(df, ID, .before=1)
+
+###TO DO: SET LEVELS FOR WIND DIRECTION - MATEO
+
+df$WindGustDir<- factor(df$WindGustDir, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "unkn"))
+df$WindDir9am<- factor(df$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm"))
+df$WindDir3pm<- factor(df$WindDir3pm, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm")) 
+
+df[, "Year"] <- as.factor(format(df[,"Date"], "%Y"))
+df[, "Month"] <- as.factor(format(df[,"Date"], "%B"))
+df[, "Day"] <- as.integer(format(df[,"Date"], "%d"))
+df <- df %>% relocate(c("Year","Month","Day"), .after = "Date")
+
+```
+
+## Splitting Data
+
+A different project team in Group 12 chose the same data set, so this team will
+work with the first half of the data set, divided by date, as instructed by
+the lab professor on 27-Sep-2021.
+
+We will use the median date to split the data set and keep the first half.
+
+```{r}
+#SUBSET DATA BY MEDIAN DATE
+df <- subset(df, Date < median(df$Date))
+```
+
+## Summary Statistics
+
+```{r}
+#SUMMARIZE DATA BY COLUMN
+summary(df)
+```
+
+```{r , message=FALSE, results='asis',fig.align = 'center'}
+###TO DO: COMMENT CODE - DIANA
+#
+#nums <- unlist(lapply(df, is.numeric)) 
+#numrain_data<-df[ , nums]
+#numrain_data<-subset(numrain_data,complete.cases(numrain_data))
+#a<-names(numrain_data)
+#a<-as.list(a)
+#
+#fun02<-function(i){index=grep(i,names(numrain_data))
+#                   bw <- nclass.Sturges(numrain_data[,index]) # Freedman-Diaconis
+#                   nm=paste0(i)
+#                   assign(paste("g",i,sep=""),
+#                   ggplot(numrain_data, aes(numrain_data[,index])) +  
+#                   geom_histogram(bins = bw,aes(y=..density..), fill="#de2d26") +
+#                   geom_density(alpha=.35, fill="#08519c",color = NA)  +
+#                   geom_vline (aes(xintercept=median(numrain_data[,index])),color="#08519c", size=1) + 
+#                   labs(title=nm, x=NULL, y="UPAS")) +
+#                   theme(plot.title = element_text(size = rel(0.7),face ="bold",hjust = 0.5),
+#                        axis.title.y = element_text(size = rel(0.4)),
+#                        axis.text = element_text(size = rel(0.4)))
+#                   }
+#Histos<-lapply(a[-1],fun02)
+#do.call(grid.arrange, Histos)
+```
+```{r , message=FALSE,fig.align = 'center'}
+# Initial correlation matrix
+#cor_org<-cor(numrain_data)
+
+###TO DO - ADD MISSING LIBRARY TO AVOID WARNING
+###TO DO - FIX COLOR SCALE
+
+# Interactive correlation matrix
+#col <- colorRampPalette(c("#990909", "#d17664", "#FFFFFF", "#77AADD", "#032f96"))
+#heatmaply(round(cor_org, 2),symm=TRUE,col=col(200),limits=c(-1,1),revC=TRUE,dendrogram="none",cexRow=0.8,cexCol=0.8,main="Correlation matrix")
+
+# Alternative graph (used in lab 2)
+# library(corrplot)
+# corrplot(cor_org, method = "color",number.cex = 1, title='Correlation matrix', mar=c(0,0,1,0), tl.col="black", tl.cex = 0.8)
+```
+
+The dataset selected covers the cities presented in the map:
+
+```{r message=FALSE, results="hide", fig.align = 'center'}
+
+####TO DO: COMMENT CODE & UPLOAD .SHP FILES TO GITHUB - DIANA
+
+# #dirshpcities<-paste0(dirname(current_path),"/Cities.shp")
+# shapecities <- st_read(paste0(dirname(current_path),"/Cities.shp"))
+# shaperegions <- st_read(paste0(dirname(current_path),"/GCCSA_2021_AUST_GDA2020.shp"))
+# 
+# ggplot(data = shaperegions) +
+#     geom_sf(aes(fill = '#d6604d')) + 
+#     geom_sf(data = shapecities, size = 3, shape = 19, fill = "#4d4d4d")
+
+```
+
+## Detecting Missing Values
+
+```{r missingdatagraphs}
+#missing_stats <- colSums(is.na(df))*100/nrow(df)
+#
+## Graph
+#vis_miss(df, warn_large_data = F)
+```
+
+```{r}
+#Display a table that shows the number of rows with a certain number of NA's
+mis_ind = rowSums(is.na(df))
+table(mis_ind)
+```
+
+```{r}
+#Plot the distribution of the number of NA's per row
+hist(mis_ind)
+```
+
+In order to build the model, we consider removing observations that are missing
+too much data. Observations that have NA values above the 90th percentile of
+the NA count distribution could be removed, but for now we will keep them.
+
+```{r}
+#Check 90th percentile of missing data points per row
+quantile(mis_ind,0.90)
+```
+
+We could consider removing observations with more than 6 NA values if there
+is not a good imputation method.
+
+```{r}
+#Summarizes the number of NA's per variable.
+mis_col = colSums(is.na(df))
+mis_col
+```
+
+```{r}
+#Check number of unique locations and summary
+num_unique_locations <- length(unique(df$Location))
+summary(df$Location)
+plot(df$Location)
+```
+
+There are 49 unique locations, and most have different numbers of recorded 
+observations, which could indicate that they started recording measurements at 
+different points in time or are missing observations for some dates.
+
+3 locations have very few observations compared to the rest which are Katherine, 
+Nhil, and Uluru.
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates <- length(unique(df$Date))
+time_difference <- as.numeric((max(df$Date)-min(df$Date)), units="days")
+total_years <- time_difference/365
+```
+
+There are weather observations for 1951 unique dates over the time span of 
+approximately 5.5 years.
+
+```{r}
+#CALCULATE NUMBER OF MISSING DATES
+num_missing_dates <- time_difference - num_unique_dates
+```
+
+There are 1951 unique dates in the data set, however there is a difference of
+2039 days between the first observation and the last observation, which means
+there are 88 dates missing in the time span. 
+
+
+## Studying Wind Direction and Speed NA distribution
+
+Wind speed and direction measurements at 9 AM and 3 PM are a daily automated 
+routine which seems to present NAs by pairs: if wind direction is NA at 9 am, 
+wind speed is either 0 or NA. The same happens at 3 pm.
+
+Furthermore, consulting the source data in (http://www.bom.gov.au/climate/dwo/) 
+we have been able to determine that NAs in these 9am and 3 pm wind data simply 
+represent absence of wind. For this, we add the level "calm" to the Dir NAs, and
+substitute Speed NAs with 0.
+
+```{r}
+#STUDYING WIND SPEED AND DIRECTION NA PAIRING AT 9 AM AND 3 PM
+table(subset(df, is.na(WindDir9am), WindSpeed9am), useNA = "always", dnn = c())
+table(subset(df, is.na(WindDir3pm), WindSpeed3pm), useNA = "always", dnn = c())
+
+#REPLACING MISSING VALUES WITH THEIR CORRESPONDENT, LOGICAL VALUES
+df$WindSpeed9am[is.na(df$WindSpeed9am)] <- 0
+df$WindSpeed3pm[is.na(df$WindSpeed3pm)] <- 0
+df$WindDir9am[is.na(df$WindDir9am)] <- "calm"
+df$WindDir3pm[is.na(df$WindDir3pm)] <- "calm"
+
+summary(subset(df, select = c(WindDir9am, WindSpeed9am, WindDir3pm, 
+                              WindSpeed3pm)))
+```
+
+Missing data in the wind gust measurements represents a different problem. While
+the measurements at 9 AM and 3 PM are regular, wind gust data refers to the
+strongest wind gust of a given date. Its frequent that a given date has no wind
+gust data but has recorded wind at both 9 AM and 3 PM, with speed values as high
+as 52 km/h. This means that wind gust data is missing arbitrarily in some cases.
+In fact, only 21 out of 1178 days without wind gust data were calm at both 9 AM 
+and 3 PM.
+
+```{r}
+#STUDYING WIND SPEED AND DIRECTION AT 9 AM AND 3 PM IN DAYS WITH "NO WIND GUST"
+table(subset(df, is.na(WindGustDir), WindGustSpeed), 
+      useNA = "always", dnn = c())
+
+summary(subset(df, is.na(WindGustDir), 
+              c(WindDir9am, WindSpeed9am, WindDir3pm, WindSpeed3pm)))
+summary(subset(df, !is.na(WindGustDir), 
+              c(WindDir9am, WindSpeed9am, WindDir3pm, WindSpeed3pm)))
+
+WindGustNA_calm_days <- count(subset(df, 
+             is.na(WindGustDir) & WindDir9am == "calm" & WindDir3pm == "calm", 
+             c(WindDir9am, WindSpeed9am, WindDir3pm, WindSpeed3pm)))
+WindGustNA_calm_days
+
+#MODIFYING WindGustDir NAs TO "unkn"
+df$WindGustDir[is.na(df$WindGustDir)] <- "unkn"
+
+```
+
+Given the fact that for for all cases where wind gust data is missing the data 
+for the regular measurements is present, we can transform NAs into a new "unkn" 
+level for our WindGustDir factor. WindGustSpeed could be numerically imputed, 
+since there seems to be a clear relationship between WindGustSpeed and 
+WindSpeed9am and WindSpeed3pm.
+
+```{r}
+#CALCULATE THE RELATIONSHIP BETWEEN WindGustSpeed and WindSpeed at 3 AM and 0 PM
+
+gustFactor <- df$WindGustSpeed/(df$WindSpeed3pm+df$WindSpeed9am)*2
+hist(gustFactor[(!is.na(gustFactor) & !is.infinite(gustFactor))
+                & gustFactor < 26], 
+     breaks = 0:26, xlim = c(0, 12), 
+     main = "Wind Gust to 9 AM and 3 PM speed average ratio",
+     xlab = "Wind Gust factor", freq = T)
+
+```
+
+## Choosing Locations to Model
+
+Due to the geographic dependencies of the rainfall model, and the amount of data
+included in the data set, we will reduce the amount of data by keeping only
+specific locations. We would like to model locations from different climate 
+zones that are spread apart geographically and have higher variability in 
+rainfall. 
+
+```{r}
+#SUMMARIZE RAINFALL BY LOCATION
+df_rainfall <- summarise(group_by(df, Location), 
+                         Mean_rainfall = mean(Rainfall, na.rm = TRUE),
+                         SD_rainfall=sd(Rainfall, na.rm = TRUE))
+df_rainfall[with(df_rainfall, order(SD_rainfall, decreasing = TRUE)),]
+```
+The Australian government has identified 8 climate zones.
+
+We will keep Cairns, Brisbane, Sydney with SydneyAirport, Moree, 
+Perth with PerthAirport, and AliceSprings.
+
+* Cairns - Climate Zone 1
+* Brisbane - Climate Zone 2
+* Alice Springs - Climate Zone 3
+* Moree - Climate Zone 4
+* Perth - Climate Zone 5
+* Sydney - Climate Zone 5/6
+
+```{r}
+#CREATE DATAFRAME OF CHOSEN LOCATIONS
+loc_keep <- c("Cairns","Brisbane","AliceSprings","Moree","Perth",
+              "PerthAirport","Sydney","SydneyAirport")
+df_remove3 <- subset(df,!Location %in% c(loc_keep))
+df <- subset(df,Location %in% c(loc_keep))
+
+#WRITE .CSV FILE OF CHOSEN LOCATIONS
+write.csv(df,'df_chosen_locations.csv')
+```
+
+Question to Diana: Does the map go here or at the beginning?
+
+Question to the team: From this point forward, I think it could be better to 
+give each location its own .Rmd file??? - Kat
+
+Question to the team: It may be worth creating separate code files for
+the series of functions we need to call on each location, and then we can
+reference those code files in order to call the functions within each Rmd file.- Kat
+
+## Splitting Data by Locations
+
+```{r}
+#CREATE DATAFRAME FOR EACH SELECTED CITY
+df_Cairns <- subset(df,Location == "Cairns")
+df_Brisbane <- subset(df,Location == "Brisbane")
+df_AliceSprings <- subset(df,Location == "AliceSprings")
+df_Moree <- subset(df,Location == "Moree")
+df_Perth <- subset(df,Location %in% c("Perth","PerthAirport"))
+df_Sydney <- subset(df,Location %in% c("Sydney","SydneyAirport"))
+
+#WRITE .CSV FILE FOR EACH SELECTED CITY
+write.csv(df_Cairns,'df_Cairns.csv')
+write.csv(df_Brisbane,'df_Brisbane.csv')
+write.csv(df_AliceSprings,'df_AliceSprings.csv')
+write.csv(df_Moree, 'df_Moree.csv')
+write.csv(df_Perth, 'df_Perth.csv')
+write.csv(df_Sydney, 'df_Sydney.csv')
+```
+
+## Summary Statistics for Chosen Locations
+
+```{r}
+#SUMMARIZE DATA BY COLUMN
+summary(df)
+
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates <- length(unique(df$Date))
+time_difference <- as.numeric((max(df$Date)-min(df$Date)), units="days")
+total_years <- time_difference/365
+num_unique_locations <- length(unique(df$Location))
+```
+
+Using the filtered data set, there are weather observations for 1859 unique 
+dates across 8 unique locations over the time span of approximately 5.3 years.
+
+```{r}
+#CALCULATE NUMBER OF MISSING DATES
+num_missing_dates <- time_difference - num_unique_dates
+```
+
+There are 1859 unique dates in the data set, however there is a difference of
+1947 days between the first observation and the last observation, which means
+there are still 88 dates missing in the time span.
+
+## Detecting Missing Values for Chosen Locations
+
+```{r}
+#Display a table that shows the number of rows with a certain number of NA's
+mis_ind = rowSums(is.na(df))
+table(mis_ind)
+```
+
+```{r}
+#Plot the distribution of the number of NA's per row
+hist(mis_ind)
+```
+```{r}
+#Summarizes the number of NA's per variable.
+mis_col = colSums(is.na(df))
+mis_col
+```
+
+
+```{r}
+#Summarizes the number of NA's per variable as percentage.
+mis_col_percent <- round((mis_col/nrow(df)*100), digits = 2)
+mis_col_percent
+```
+
+
+## Summarizing Data & NA's by Location
+
+### Cairns
+
+```{r}
+summary(df_Cairns)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Cairns <- length(unique(df_Cairns$Date))
+time_difference_Cairns <- as.numeric((max(df_Cairns$Date)-min(df_Cairns$Date)), units="days")
+total_years_Cairns <- time_difference/365
+num_missing_dates_Cairns <- time_difference_Cairns - num_unique_dates_Cairns
+num_missing_dates_Cairns
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Cairns, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+### Brisbane
+
+```{r}
+summary(df_Brisbane)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Brisbane <- length(unique(df_Brisbane$Date))
+time_difference_Brisbane <- as.numeric((max(df_Brisbane$Date)-min(df_Brisbane$Date)), units="days")
+total_years_Brisbane <- time_difference/365
+num_missing_dates_Brisbane <- time_difference_Brisbane - num_unique_dates_Brisbane
+num_missing_dates_Brisbane
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Brisbane, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+### Alice Springs
+
+```{r}
+summary(df_AliceSprings)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Alice <- length(unique(df_AliceSprings$Date))
+time_difference_Alice <- as.numeric((max(df_AliceSprings$Date)-min(df_AliceSprings$Date)), units="days")
+total_years_Alice <- time_difference/365
+num_missing_dates_Alice <- time_difference_Alice - num_unique_dates_Alice
+num_missing_dates_Alice
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_AliceSprings, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+### Moree
+
+```{r}
+summary(df_Moree)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Moree <- length(unique(df_Moree$Date))
+time_difference_Moree <- as.numeric((max(df_Moree$Date)-min(df_Moree$Date)), units="days")
+total_years_Moree <- time_difference/365
+num_missing_dates_Moree <- time_difference_Moree - num_unique_dates_Moree
+num_missing_dates_Moree
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Moree, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+### Perth
+
+```{r}
+summary(df_Perth)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Perth <- length(unique(df_Perth$Date))
+time_difference_Perth <- as.numeric((max(df_Perth$Date)-min(df_Perth$Date)), units="days")
+total_years_Perth <- time_difference/365
+num_missing_dates_Perth <- time_difference_Perth - num_unique_dates_Perth
+num_missing_dates_Perth
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Perth, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+### Sydney
+
+```{r}
+summary(df_Sydney)
+```
+
+```{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Sydney <- length(unique(df_Sydney$Date))
+time_difference_Sydney <- as.numeric((max(df_Sydney$Date)-min(df_Sydney$Date)), units="days")
+total_years_Sydney <- time_difference/365
+num_missing_dates_Sydney <- time_difference_Sydney - num_unique_dates_Sydney
+num_missing_dates_Sydney
+
+a <- subset(df_Sydney, Date == "2010-03-19"); a
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Sydney, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+
+
+```
+
+
+```{r plot-options second try}
+ui <- basicPage(
+  h1("Interactive rain plot"),
+  selectInput(inputId="RainPlotLocation", 
+              label = "Choose a location",
+              list("Cairns","Perth","SydneyAirport")),
+
+  plotOutput("plot")
+)
+
+server <- function(input,output,session) {
+  
+  #outputs
+  output$plot <- renderPlot({
+    
+    df_rainWind <- filter(df, Location == input$RainPlotLocation)
+
+
+    rain_per_wind <- df_rainWind %>% group_by( WindGustDir, .drop = F) %>%
+      summarize( mn = mean( Rainfall, na.rm = T )) %>%
+      replace_na(list(WindGustDir = "unkn", mn = 0))
+
+    
+    maxim <- max(rain_per_wind$mn[1:16])
+
+    radar_matrix <- rev(as.data.frame(rbind(rep(maxim,16) , rep(0,16) , 
+                                t(rain_per_wind[1:16,2])),
+                          col.names = c("N", "NNE", "NE", "ENE", 
+                                        "E", "ESE", "SE", "SSE", 
+                                        "S", "SSW", "SW", "WSW", 
+                                        "W", "WNW", "NW", "NNW")))
+    
+    a <- radarchart(radar_matrix, axistype = 1, title = "Rainfall per WindGustDir",
+               cglcol="grey", cglty=1, axislabcol="grey",
+               caxislabels=round(seq(0,maxim,maxim/4),1), cglwd=0.8,)
+
+    
+  })
+}
+
+shinyApp(ui=ui, server = server)
+
+
+```
+
+
+
+```{r user plot}
+
+
+data0 <- filter(df, Location == "Cairns")
+
+data1 <- data0 %>% group_by( WindGustDir, .drop = F) %>%
+        summarize( mn = mean( Rainfall, na.rm = T )) %>% replace_na(list(WindGustDir = "unk", mn = 0))
+
+data1$mn <- ifelse(is.na(data1$mn),0,data1$mn)
+
+data3 <- max(data1$mn[1:16])
+
+data2 <- ifelse(is.na(data1$mn),0,data1$mn)
+
+
+
+data1b  <- data.frame(data1$WindGustDir, data2)
+
+data4 <- rev(as.data.frame(rbind(rep(data3,16) , rep(0,16) , 
+                              t(data1[1:16,2])),
+                           names = c("N", "NNE", "NE", "ENE", 
+                                      "E", "ESE", "SE", "SSE", 
+                                      "S", "SSW", "SW", "WSW", 
+                                      "W", "WNW", "NW", "NNW")))
+
+data4b <- rev(as.data.frame(rbind(rep(data3,16) , rep(0,16) , 
+                              t(data1b[1:16,2])),
+                           names = c("N", "NNE", "NE", "ENE", 
+                                      "E", "ESE", "SE", "SSE", 
+                                      "S", "SSW", "SW", "WSW", 
+                                      "W", "WNW", "NW", "NNW")))
+
+
+#df_rainWind <- df[df$Location == "Moree",]
+#rain_per_wind <- df_rainWind %>%
+#  group_by( WindGustDir, .drop = F) %>%
+#  summarize( mn = mean( Rainfall, na.rm = T ))
+#rain_per_wind
+#rain_per_wind[is.na(rain_per_wind)] <- 0
+#rain_per_wind[1:16,2]
+#maxim <- max(rain_per_wind[1:16,2])
+#radar_matrix <- t(rain_per_wind[1:16,2])
+#radar_matrix
+#
+#radar_matrix <- as.data.frame(rbind(rep(maxim,16) , rep(0,16) , radar_matrix))
+#colnames(radar_matrix) <- c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", #"SSW", "SW", "WSW", "W", "WNW", "NW", "NNW")
+#radar_matrix <- rev(radar_matrix[,c(2:16,1)])
+#
+#
+## The default radar chart 
+#par(mfrow=c(1,1))
+#
+#radarchart(radar_matrix, axistype = 1, title = "Rainfall per wind direction, Cairns", 
+#           cglcol="grey", cglty=1, axislabcol="grey", #caxislabels=round(seq(0,maxim,maxim/4),1), cglwd=0.8,)
+```
+
