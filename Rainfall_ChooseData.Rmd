@@ -103,9 +103,9 @@ df <- add_column(df, ID, .before=1)
 
 ###TO DO: SET LEVELS FOR WIND DIRECTION - MATEO
 
-#df$WindGustDir <- 
-#df$WindDir9am <- 
-#df$WindDir3pm <- 
+df$WindGustDir<- factor(df$WindGustDir, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "unkn"))
+df$WindDir9am<- factor(df$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm"))
+df$WindDir3pm<- factor(df$WindDir3pm, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm")) 
 
 df[, "Year"] <- as.factor(format(df[,"Date"], "%Y"))
 df[, "Month"] <- as.factor(format(df[,"Date"], "%B"))
@@ -194,14 +194,10 @@ The dataset selected covers the cities presented in the map:
 ## Detecting Missing Values
 
 ```{r missingdatagraphs}
-
 missing_stats <- colSums(is.na(df))*100/nrow(df)
 
 # Graph
 vis_miss(df, warn_large_data = F)
-
-aggr(df, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
-
 ```
 
 ```{r}
@@ -267,6 +263,76 @@ There are 1951 unique dates in the data set, however there is a difference of
 there are 88 dates missing in the time span. 
 
 
+## Studying Wind Direction and Speed NA distribution
+
+Wind speed and direction measurements at 9 AM and 3 PM are a daily automated 
+routine which seems to present NAs by pairs: if wind direction is NA at 9 am, 
+wind speed is either 0 or NA. The same happens at 3 pm.
+
+Furthermore, consulting the source data in (http://www.bom.gov.au/climate/dwo/) 
+we have been able to determine that NAs in these 9am and 3 pm wind data simply 
+represent absence of wind. For this, we add the level "calm" to the Dir NAs, and
+substitute Speed NAs with 0.
+
+````{r}
+#STUDYING WIND SPEED AND DIRECTION NA PAIRING AT 9 AM AND 3 PM
+table(subset(df, is.na(WindDir9am), WindSpeed9am), useNA = "always", dnn = c())
+table(subset(df, is.na(WindDir3pm), WindSpeed3pm), useNA = "always", dnn = c())
+
+#REPLACING MISSING VALUES WITH THEIR CORRESPONDENT, LOGICAL VALUES
+df$WindSpeed9am[is.na(df$WindSpeed9am)] <- 0
+df$WindSpeed3pm[is.na(df$WindSpeed3pm)] <- 0
+df$WindDir9am[is.na(df$WindDir9am)] <- "calm"
+df$WindDir3pm[is.na(df$WindDir3pm)] <- "calm"
+
+summary(subset(df, select = c(WindDir9am, WindSpeed9am, WindDir3pm, 
+                              WindSpeed3pm)))
+````
+
+Missing data in the wind gust measurements represents a different problem. While
+the measurements at 9 AM and 3 PM are regular, wind gust data refers to the
+strongest wind gust of a given date. Its frequent that a given date has no wind
+gust data but has recorded wind at both 9 AM and 3 PM, with speed values as high
+as 52 km/h. This means that wind gust data is missing arbitrarily in some cases.
+In fact, only 21 out of 1178 days without wind gust data were calm at both 9 AM 
+and 3 PM.
+
+````{r}
+#STUDYING WIND SPEED AND DIRECTION AT 9 AM AND 3 PM IN DAYS WITH "NO WIND GUST"
+table(subset(df, is.na(WindGustDir), WindGustSpeed), 
+      useNA = "always", dnn = c())
+
+summary(subset(df, is.na(WindGustDir), 
+              c(WindDir9am, WindSpeed9am, WindDir3pm, WindSpeed3pm)))
+summary(subset(df, !is.na(WindGustDir), 
+              c(WindDir9am, WindSpeed9am, WindDir3pm, WindSpeed3pm)))
+
+WindGustNA_calm_days <- count(subset(df, 
+             is.na(WindGustDir) & WindDir9am == "calm" & WindDir3pm == "calm", 
+             c(WindDir9am, WindSpeed9am, WindDir3pm, WindSpeed3pm)))
+WindGustNA_calm_days
+
+#MODIFYING WindGustDir NAs TO "unkn"
+df$WindGustDir[is.na(df$WindGustDir)] <- "unkn"
+
+````
+
+Given the fact that for for all cases where wind gust data is missing the data 
+for the regular measurements is present, we can transform NAs into a new "unkn" 
+level for our WindGustDir factor. WindGustSpeed could be numerically imputed, 
+since there seems to be a clear relationship between WindGustSpeed and 
+WindSpeed9am and WindSpeed3pm.
+
+````{r}
+#CALCULATE THE RELATIONSHIP BETWEEN WindGustSpeed and WindSpeed at 3 AM and 0 PM
+
+gustFactor <- df$WindGustSpeed/(df$WindSpeed3pm+df$WindSpeed9am)*2
+hist(gustFactor[(!is.na(gustFactor) & !is.infinite(gustFactor))], 
+     breaks = 1:30, xlim = c(0, 12), 
+     main = "Wind Gust to 9 AM and 3 PM speed average ratio",
+     xlab = "Wind Gust factor", freq = T)
+
+````
 
 ## Choosing Locations to Model
 
@@ -340,6 +406,7 @@ write.csv(df_Sydney, 'df_Sydney.csv')
 ```{r}
 #SUMMARIZE DATA BY COLUMN
 summary(df)
+
 ```
 
 ```{r}
@@ -388,7 +455,6 @@ mis_col_percent
 ```
 
 
-
 ## Summarizing Data & NA's by Location
 
 ### Cairns
@@ -403,6 +469,9 @@ time_difference_Cairns <- as.numeric((max(df_Cairns$Date)-min(df_Cairns$Date)), 
 total_years_Cairns <- time_difference/365
 num_missing_dates_Cairns <- time_difference_Cairns - num_unique_dates_Cairns
 num_missing_dates_Cairns
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Cairns, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
 ````
 
 ### Brisbane
@@ -418,6 +487,9 @@ time_difference_Brisbane <- as.numeric((max(df_Brisbane$Date)-min(df_Brisbane$Da
 total_years_Brisbane <- time_difference/365
 num_missing_dates_Brisbane <- time_difference_Brisbane - num_unique_dates_Brisbane
 num_missing_dates_Brisbane
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Brisbane, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
 ````
 
 ### Alice Springs
@@ -433,4 +505,67 @@ time_difference_Alice <- as.numeric((max(df_AliceSprings$Date)-min(df_AliceSprin
 total_years_Alice <- time_difference/365
 num_missing_dates_Alice <- time_difference_Alice - num_unique_dates_Alice
 num_missing_dates_Alice
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_AliceSprings, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
 ````
+
+### Moree
+
+```{r}
+summary(df_Moree)
+````
+
+````{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Moree <- length(unique(df_Moree$Date))
+time_difference_Moree <- as.numeric((max(df_Moree$Date)-min(df_Moree$Date)), units="days")
+total_years_Moree <- time_difference/365
+num_missing_dates_Moree <- time_difference_Moree - num_unique_dates_Moree
+num_missing_dates_Moree
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Moree, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+````
+
+### Perth
+
+```{r}
+summary(df_Perth)
+````
+
+````{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Perth <- length(unique(df_Perth$Date))
+time_difference_Perth <- as.numeric((max(df_Perth$Date)-min(df_Perth$Date)), units="days")
+total_years_Perth <- time_difference/365
+num_missing_dates_Perth <- time_difference_Perth - num_unique_dates_Perth
+num_missing_dates_Perth
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Perth, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+````
+
+### Sydney
+
+```{r}
+summary(df_Sydney)
+````
+
+````{r}
+#CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
+num_unique_dates_Sydney <- length(unique(df_Sydney$Date))
+time_difference_Sydney <- as.numeric((max(df_Sydney$Date)-min(df_Sydney$Date)), units="days")
+total_years_Sydney <- time_difference/365
+num_missing_dates_Sydney <- time_difference_Sydney - num_unique_dates_Sydney
+num_missing_dates_Sydney
+
+a <- subset(df_Sydney, Date == "2010-03-19"); a
+
+#STUDY NA DISTRIBUTION AND PATTERNS
+aggr(df_Sydney, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+````
+
+
+
+
