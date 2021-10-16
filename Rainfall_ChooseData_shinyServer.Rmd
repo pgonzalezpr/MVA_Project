@@ -621,59 +621,5 @@ shinyApp(ui=ui, server = server)
 
 
 
-```{r user plot}
 
-
-data0 <- filter(df, Location == "Cairns")
-
-data1 <- data0 %>% group_by( WindGustDir, .drop = F) %>%
-        summarize( mn = mean( Rainfall, na.rm = T )) %>% replace_na(list(WindGustDir = "unk", mn = 0))
-
-data1$mn <- ifelse(is.na(data1$mn),0,data1$mn)
-
-data3 <- max(data1$mn[1:16])
-
-data2 <- ifelse(is.na(data1$mn),0,data1$mn)
-
-
-
-data1b  <- data.frame(data1$WindGustDir, data2)
-
-data4 <- rev(as.data.frame(rbind(rep(data3,16) , rep(0,16) , 
-                              t(data1[1:16,2])),
-                           names = c("N", "NNE", "NE", "ENE", 
-                                      "E", "ESE", "SE", "SSE", 
-                                      "S", "SSW", "SW", "WSW", 
-                                      "W", "WNW", "NW", "NNW")))
-
-data4b <- rev(as.data.frame(rbind(rep(data3,16) , rep(0,16) , 
-                              t(data1b[1:16,2])),
-                           names = c("N", "NNE", "NE", "ENE", 
-                                      "E", "ESE", "SE", "SSE", 
-                                      "S", "SSW", "SW", "WSW", 
-                                      "W", "WNW", "NW", "NNW")))
-
-
-#df_rainWind <- df[df$Location == "Moree",]
-#rain_per_wind <- df_rainWind %>%
-#  group_by( WindGustDir, .drop = F) %>%
-#  summarize( mn = mean( Rainfall, na.rm = T ))
-#rain_per_wind
-#rain_per_wind[is.na(rain_per_wind)] <- 0
-#rain_per_wind[1:16,2]
-#maxim <- max(rain_per_wind[1:16,2])
-#radar_matrix <- t(rain_per_wind[1:16,2])
-#radar_matrix
-#
-#radar_matrix <- as.data.frame(rbind(rep(maxim,16) , rep(0,16) , radar_matrix))
-#colnames(radar_matrix) <- c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", #"SSW", "SW", "WSW", "W", "WNW", "NW", "NNW")
-#radar_matrix <- rev(radar_matrix[,c(2:16,1)])
-#
-#
-## The default radar chart 
-#par(mfrow=c(1,1))
-#
-#radarchart(radar_matrix, axistype = 1, title = "Rainfall per wind direction, Cairns", 
-#           cglcol="grey", cglty=1, axislabcol="grey", #caxislabels=round(seq(0,maxim,maxim/4),1), cglwd=0.8,)
-```
 
