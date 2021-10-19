@@ -397,12 +397,12 @@ df_Perth <- subset(df,Location %in% c("Perth","PerthAirport"))
 df_Sydney <- subset(df,Location %in% c("Sydney","SydneyAirport"))
 
 #WRITE .CSV FILE FOR EACH SELECTED CITY
-write.csv(df_Cairns,'df_Cairns.csv')
-write.csv(df_Brisbane,'df_Brisbane.csv')
-write.csv(df_AliceSprings,'df_AliceSprings.csv')
-write.csv(df_Moree, 'df_Moree.csv')
-write.csv(df_Perth, 'df_Perth.csv')
-write.csv(df_Sydney, 'df_Sydney.csv')
+write.csv(df_Cairns,'df_Cairns.csv', row.names = FALSE)
+write.csv(df_Brisbane,'df_Brisbane.csv', row.names = FALSE)
+write.csv(df_AliceSprings,'df_AliceSprings.csv', row.names = FALSE)
+write.csv(df_Moree, 'df_Moree.csv', row.names = FALSE)
+write.csv(df_Perth, 'df_Perth.csv', row.names = FALSE)
+write.csv(df_Sydney, 'df_Sydney.csv', row.names = FALSE)
 ```
 
 ## Summary Statistics for Chosen Locations
@@ -471,9 +471,9 @@ summary(df_Cairns)
 #CHECK NUMBER OF UNIQUE DATES AND TIME SPAN
 num_unique_dates_Cairns <- length(unique(df_Cairns$Date))
 time_difference_Cairns <- as.numeric((max(df_Cairns$Date)-min(df_Cairns$Date)), units="days")
-total_years_Cairns <- time_difference/365
-num_missing_dates_Cairns <- time_difference_Cairns - num_unique_dates_Cairns
-num_missing_dates_Cairns
+#, row.names = FALSEtotal_years_Cairns <- time_difference/365
+#num_missing_dates_Cairns <- time_difference_Cairns - num_unique_dates_Cairns
+#num_missing_dates_Cairns
 
 #STUDY NA DISTRIBUTION AND PATTERNS
 aggr(df_Cairns, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
@@ -579,7 +579,8 @@ ui <- basicPage(
   h1("Interactive rain plot"),
   selectInput(inputId="RainPlotLocation", 
               label = "Choose a location",
-              list("Cairns","Perth","SydneyAirport")),
+              list("Cairns","Perth","SydneyAirport",
+                   "Moree","Brisbane","AliceSprings")),
 
   plotOutput("plot")
 )

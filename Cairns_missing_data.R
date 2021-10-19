@@ -3,7 +3,7 @@ library (lubridate)
 library (dplyr)
 library (ggplot2)
 library (VIM)
-library( visdat)
+library (visdat)
 library (corrplot)
 library (grid)
 library (gridExtra)
@@ -11,8 +11,7 @@ library (sm)
 
 #LOAD DATA
 df <- read.csv("df_Cairns.csv", stringsAsFactors = T)
-#removing the double ID column titled X
-df <- subset(df, select=-c(X))
+
 
 #CHANGE VARIABLE TYPE
 df$Date <- as.Date(df$Date)
