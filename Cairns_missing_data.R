@@ -8,18 +8,13 @@ library (corrplot)
 library (grid)
 library (gridExtra)
 library (sm)
+library (mice)
 
 #LOAD DATA
 df <- read.csv("df_Cairns.csv", stringsAsFactors = T)
-#removing the double ID column titled X
-df <- subset(df, select=-c(X))
 
 #CHANGE VARIABLE TYPE
 df$Date <- as.Date(df$Date)
-
-#ADD 'Calm' LEVEL TO WindDir
-levels(df$WindDir9am) <- c(levels(df$WindDir9am), "Calm")    
-levels(df$WindDir3pm) <- c(levels(df$WindDir3pm), "Calm")    
 
 #LIST VARIABLES
 str(df)
@@ -50,10 +45,12 @@ assign(paste("g",i,sep=""),
 Histos<-lapply(a[-1],fun02)
 do.call(grid.arrange, Histos)
 
-cor_matrix = cor(numrain_data[,c(4:19)])
+cor_matrix = cor(numrain_data[,c(4:19)]) #starting from column 4: MinTemp
 corrplot(cor_matrix, method = 'number') # colorful number
 
 #DETECT MISSING DATA
+
+#Missing Data from WIND already imputed in other .RMd file.
 
 #Detecting missing data by row
 mis_ind = rowSums(is.na(df))
@@ -191,25 +188,23 @@ df_NAs[na_Cloud3,]
 
 #IMPUTE MISSING VALUES
 
-###If WindSpeed is 0, and WindDir is missing, impute 'Calm'
+###'calm' added to wind levels in other .csv
 
-#create variable to identify rows that are missing wind direction at 9am
-na_WindDir9am <- which(is.na(df$WindDir9am))
-#check summary of wind speed at 9am for rows that are missing wind direction at 9am
-summary(df[na_WindDir9am,]$WindSpeed9am)
-### All values of WindDir9am can be imputed to 'Calm'
-#imputation using row identifier
-df$WindDir9am[na_WindDir9am] <- 'Calm'
+##create variable to identify rows that are missing wind direction at 9am
+#na_WindDir9am <- which(is.na(df$WindDir9am))
+##check summary of wind speed at 9am for rows that are missing wind direction at 9am
+#summary(df[na_WindDir9am,]$WindSpeed9am)
+#### All values of WindDir9am can be imputed to 'Calm'
+##imputation using row identifier
+#df$WindDir9am[na_WindDir9am] <- 'Calm'
 
-#create variable to identify rows that are missing wind direction at 3pm
-na_WindDir3pm <- which(is.na(df$WindDir3pm))
-#check summary of wind speed at 3pm for rows that are missing wind direction at 3pm
-summary(df[na_WindDir3pm,]$WindSpeed3pm)
-### All values of WindDir3pm can be imputed to 'Calm'
-#imputation using row identifier
-df$WindDir3pm[na_WindDir3pm] <- 'Calm'
-
-summary(df)
+##create variable to identify rows that are missing wind direction at 3pm
+#na_WindDir3pm <- which(is.na(df$WindDir3pm))
+##check summary of wind speed at 3pm for rows that are missing wind direction at 3pm
+#summary(df[na_WindDir3pm,]$WindSpeed3pm)
+#### All values of WindDir3pm can be imputed to 'Calm'
+##imputation using row identifier
+#df$WindDir3pm[na_WindDir3pm] <- 'Calm'
 
 # IMPUTATION BY MICE
 
@@ -277,7 +272,7 @@ df[na_RainTomYes,]$RainTomorrow <- "Yes"
 summary(df)
 
 #All NAs are filled, write new .csv to use for imputing time series.
-#write.csv(df,'df_Cairns_MICE.csv')
+#write.csv(df,'df_Cairns_MICE.csv', row.names = FALSE)
 
 #https://www.earthdatascience.org/courses/earth-analytics/time-series-data/summarize-time-series-by-month-in-r/
 # plot rainfall as time series
