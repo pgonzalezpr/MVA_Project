@@ -369,7 +369,7 @@ df_remove3 <- subset(df,!Location %in% c(loc_keep))
 df <- subset(df,Location %in% c(loc_keep))
 
 #WRITE .CSV FILE OF CHOSEN LOCATIONS
-write.csv(df,'df_chosen_locations.csv')
+write.csv(df,'df_chosen_locations.csv', row.names = FALSE)
 ```
 
 Question to Diana: Does the map go here or at the beginning?
@@ -393,12 +393,12 @@ df_Perth <- subset(df,Location %in% c("Perth","PerthAirport"))
 df_Sydney <- subset(df,Location %in% c("Sydney","SydneyAirport"))
 
 #WRITE .CSV FILE FOR EACH SELECTED CITY
-write.csv(df_Cairns,'df_Cairns.csv')
-write.csv(df_Brisbane,'df_Brisbane.csv')
-write.csv(df_AliceSprings,'df_AliceSprings.csv')
-write.csv(df_Moree, 'df_Moree.csv')
-write.csv(df_Perth, 'df_Perth.csv')
-write.csv(df_Sydney, 'df_Sydney.csv')
+write.csv(df_Cairns,'df_Cairns.csv', row.names = FALSE)
+write.csv(df_Brisbane,'df_Brisbane.csv', row.names = FALSE)
+write.csv(df_AliceSprings,'df_AliceSprings.csv', row.names = FALSE)
+write.csv(df_Moree, 'df_Moree.csv', row.names = FALSE)
+write.csv(df_Perth, 'df_Perth.csv', row.names = FALSE)
+write.csv(df_Sydney, 'df_Sydney.csv', row.names = FALSE)
 ```
 
 ## Summary Statistics for Chosen Locations

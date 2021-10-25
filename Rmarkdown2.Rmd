@@ -1,0 +1,224 @@
+---
+title: 'Group 1: Multivariate analysis of australian climate data'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo Gonzalez, Mateo Jacome
+  Gonzalez y Pedro Gonzalez Prado
+output:
+  html_document:
+    self_contained: false
+---
+
+Some text before section
+
+## Problems statement and selected dataset
+
+This project seeks to develop, train and evaluate a statistical model that helps end-users make predictions about whether or not there will be rainfall the following day, given the weather conditions on a given day in Australia. In addition, several multivariate techniques will be implemented in order to extract key insights and relevant information from the available historical data. A better understanding of the factors influencing rainfall in Australia and how these may have changed over time given the harsh climate changes the territory has experienced in the last decade may be of use to predict future droughts and wildfire crises. 
+
+The main data set was obtained from the repository at [Kaggle.com](https://www.kaggle.com/jsphyg/weather-dataset-rattle-package). This data set is built using publicly available climate data, provided by the [Australian Bureau of Meteorology](http://www.bom.gov.au/) and measured by weather stations distributed across the country. It contains more than 100,000 daily weather observations over a 10-year period from 2007 to 2017 from 49 unique locations in Australia. These observations include temperature, rainfall, atmospheric pressure, evaporation, humidity, wind direction, and wind speed at different times during the day.  More specifically, the dataset contains 24 columns in total. Columns 1 through 21 are defined by the [Australian Government Bureau of Meteorology](http://www.bom.gov.au/): 
+
+1. **Date**: date of the observation. 
+2. **Location**: common name for the weather station location. 
+3. **MinTemp**: minimum temperature in the 24 hours to 9am, degrees Celsius.
+4. **MaxTemp**: maximum temperature in the 24 hours from 9am, degrees Celsius.
+5. **Rainfall**: rainfall in the 24 hours to 9am, millimeters. 
+6. **Evaporation**: "Class A" pan evaporation in the 24 hours to 9am, millimeters.
+7. **Sunshine**: number of hours of bright sunshine in the 24 hours to midnight.
+8. **WindGustDir**: direction of the strongest wind gust in the 24 hours to midnight, 
+measured with 16 compass points.  
+9. **WindGustSpeed**: speed of strongest wind gust in the 24 hours to midnight, km/h.
+10. **WindDir9am**: wind direction  at 9am, measured with 16 compass points. 
+11. **WindDir3pm**: wind direction at 3pm, measured with 16 compass points. 
+12. **WindSpeed9am**: average wind speed over the 10-minute period prior to 9am, km/h.
+13. **WindSpeed3pm**: average wind speed over the 10-minute period prior to 3pm, km/h.
+14. **Humidity9am**: relative humidity percentage at 9am. 
+15. **Humidity3pm**: relative humidity percentage at 3pm.
+16. **Pressure9am**:  atmospheric pressure (hpa) reduced to mean sea level at 9am.
+17. **Pressure3pm**: atmospheric pressure (hpa) reduced to mean sea level at 3pm.
+18. **Cloud9am**: fraction of sky obscured by cloud at 9am, measured in oktas, a unit of eights that describes the amount of cloud cover at any given location such as a weather station, ranging from 0 (completely clear sky) to 8 (completely covered sky). Value 9 (sky obstructed from view) https://en.wikipedia.org/wiki/Okta 
+19. **Cloud3pm**: fraction of sky obscured by cloud at 3pm, measured in oktas.
+20. **Temp9am**: temperature at 9am, measured in degree celsius. 
+21. **Temp3pm**: temperature at 3pm, measured in degree celsius.
+22. **RainToday**: boolean variable; Yes if precipitation (mm) in the 24 hours to 9am exceeds 1 mm, otherwise No. 
+23. **RainTomorrow**: boolean variable; Yes if the following day precipitation exceeds 1 mm, otherwise No. 
+
+For our proposed analysis, to avoid overlapping with other workgroups of the same course, and according to the lecturer suggestion on september 21st class, we have chosen the first half of the original data. 
+
+Thus, this project comprises a stage of data delimitation, initial analysis of variables, identification and imputation of missing data, data analysis using multivariate techniques and prediction of the variable rain for the next day. We performed the proposed analyzes using R software. This notebook will show each step of data processing to visualize through chunks of codes to make them reproducible.
+
+```{r, ini, message=FALSE, warning=FALSE, results='hide'}
+
+# CLEARING ENVIRONMENT #
+rm(list=ls(all=TRUE))
+#PREPARE WORK DIRECTORY 
+#current_path <- getActiveDocumentContext()$path 
+#setwd(dirname(current_path ))
+
+#INSTALL & LOAD LIBRARIES
+# Required packages
+pkgs<-c("corrplot","cowplot","dplyr","dygraphs","DT","factoextra","FactoMineR","ggplot2","ggrepel","ggspatial","googleway","grid","gridExtra","heatmaply","htmlwidgets","knitr","lattice","leaflet","lubridate","naniar","plotly","rnaturalearth","rnaturalearthdata","rstudioapi","sf","sm","summarytools","mice","tidyr","tidyverse","VIM","visdat")
+
+# Non-installed packages
+inspkgs<-pkgs[!pkgs %in% installed.packages()]
+for(libs in inspkgs) install.packages(libs, repos = "http://cran.us.r-project.org")
+
+# Loading required
+sapply(pkgs,require,character=TRUE)
+
+# Import initial dataset
+df <- read.csv("weatherAUSOriginal.csv", stringsAsFactors = TRUE)
+
+```
+
+Once the data set was loaded, it was verified that it contained the described variables and carried out the necessary operations so that the numerical and categorical variables were displayed to perform the analysis.
+
+###  Checking variables
+
+```{r, vars, message=FALSE, warning=FALSE}
+#LIST VARIABLES
+print(dfSummary(df), method = 'render')
+```
+
+### Data preparation
+
+As mentioned before, different project team in Group 12 chose the same data set, so this team will work with the first half of the data set, divided by date, as instructed by the lab professor on 27-Sep-2021. We will use the median date to split the data set and keep the first half.
+
+For convenience, the project team adds an ID variable and defines the levels of wind direction based on clockwise orientation of the compass points. The Date variable is also formatted as a date. In order to use some of the data  analysis algorithms, the date will be better interpreted as Year, Month, and Day of month, so columns are added for these variables.
+
+
+```{r}
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+#Add ID column
+ID = c(1:nrow(df))
+df <- add_column(df, ID, .before=1)
+
+###TO DO: SET LEVELS FOR WIND DIRECTION - MATEO
+df$WindGustDir<- factor(df$WindGustDir, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "unkn"))
+df$WindDir9am<- factor(df$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm"))
+df$WindDir3pm<- factor(df$WindDir3pm, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm")) 
+df[, "Year"] <- as.factor(format(df[,"Date"], "%Y"))
+df[, "Month"] <- as.factor(format(df[,"Date"], "%B"))
+df[, "Day"] <- as.integer(format(df[,"Date"], "%d"))
+df <- df %>% relocate(c("Year","Month","Day"), .after = "Date")
+
+#SUBSET DATA BY MEDIAN DATE
+
+df <- subset(df, Date < median(df$Date))
+
+```
+
+The final dataset chosen is described in the next table
+
+
+```{r}
+
+print(dfSummary(df), method = 'render')
+
+```
+
+Below is a map that shows the location of the cities selected for the analysis.
+
+```{r out.width='100%', echo=FALSE}
+#Coordinates of selected cities
+lon <- c(151.216454, 133.882800, 153.074000, 145.772200, 115.860500, 149.777300)
+lat <- c(-33.854816, -23.698700, -27.341600, -16.920700, -31.952900, -29.306000)
+Name <- c("Sydney", "AliceSprings", "Brisbane", "Cairns", "Perth", "Moree")
+# Join the variables to create a data frame
+locations <- data.frame(Name,lat,lon)
+
+leaflet(data = locations) %>% addTiles() %>% 
+    setView(lng = 135, lat = -28, zoom = 04) %>%
+  addMarkers(~lon, ~lat, popup = ~as.character(Name), label = ~as.character(Name))
+
+```
+
+## Exploratory analysis
+
+
+```{r , message= FALSE, warning = FALSE, fig.align = 'center'}
+
+nums <- unlist(lapply(df, is.numeric)) 
+numrain_data<-df[ , nums]
+numrain_data<-subset(numrain_data,complete.cases(numrain_data))
+# Initial correlation matrix
+
+cor_org<-cor(numrain_data)
+###TO DO - ADD MISSING LIBRARY TO AVOID WARNING
+###TO DO - FIX COLOR SCALE
+# Interactive correlation matrix
+#col <- colorRampPalette(c("#990909", "#d17664", "#FFFFFF", "#77AADD", "#032f96"))
+#heatmaply(round(cor_org, 2),symm=TRUE,col=col(200),limits=c(-1,1),revC=TRUE,dendrogram="none",cexRow=0.8,cexCol=0.8,main="Correlation matrix")
+# Alternative graph (used in lab 2)
+
+corrplot(cor_org, method = "color",number.cex = 1, title='Correlation matrix', mar=c(0,0,1,0), tl.col="black", tl.cex = 0.8)
+```
+
+## Detecting Missing Values
+
+The dataset contains 72.701 rows and 27 variables of which only 33.103 are complete, corresponding to the 45,53% of the total.  
+
+```{r missingdatagraphs}
+sum(complete.cases(df))
+missing_stats <- colSums(is.na(df))*100/nrow(df)
+
+#Display a table that shows the number of rows with a certain number of NA's
+mis_ind = rowSums(is.na(df))
+#kable(table(mis_ind))
+
+
+#Plot the distribution of the number of NA's per row
+qplot(mis_ind, geom="histogram",
+      binwidth = 2,  
+      main = "Histogram of missing values per row", 
+      xlab = "ID",  
+      fill=I("gray"))
+
+#hist(mis_ind)
+```
+
+The variable with most proportion of missing data are sunshine (38.5%), fraction of sky obscured 9am (35.28%), by 3pm (36.61%) followed by evapotranspiration (35.89%).
+
+
+```{r missingdatagraphs2, warning=FALSE}
+
+#Summarizes the number of NA's per variable.
+mis_col = colSums(is.na(df))
+kable(mis_col)
+
+# Graph
+vis_miss(df, warn_large_data = F)
+
+```
+
+In order to build the model, we consider removing observations that are missing too much data. Observations that have NA values above the 90th percentile of the NA count distribution could be removed, but for now we will keep them.
+
+
+```{r}
+#Check 90th percentile of missing data points per row
+quantile(mis_ind,0.90)
+```
+
+We could consider removing observations with more than 6 NA values if there
+is not a good imputation method.
+
+```{r}
+#Summarizes the number of NA's per variable.
+mis_col = colSums(is.na(df))
+kable(mis_col)
+```
+
+```{r}
+#Check number of unique locations and summary
+num_unique_locations <- length(unique(df$Location))
+dfSummary(df$Location)
+plot(df$Location)
+```
+
+There are 49 unique locations, and most have different numbers of recorded 
+observations, which could indicate that they started recording measurements at 
+different points in time or are missing observations for some dates.
+
+3 locations have very few observations compared to the rest which are Katherine, 
+Nhil, and Uluru.
+
+
