@@ -423,7 +423,7 @@ if (all(dates_RainTomNo == df[na_RainTom,c("Date")])) {
 summary(df)
 
 #All NAs are filled, write new .csv to use for imputing time series.
-#write.csv(df,'df_Brisbane_MICE.csv', row.names = FALSE)
+#write.csv(df,'Location CSVs/df_Brisbane_MICE.csv', row.names = FALSE)
 
 #https://www.earthdatascience.org/courses/earth-analytics/time-series-data/summarize-time-series-by-month-in-r/
 # plot rainfall as time series
