@@ -1,0 +1,323 @@
+---
+title: "Perth_missing_data"
+author: "Kat Weissman"
+date: "10/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library (lubridate)
+library (dplyr)
+library (ggplot2)
+library (VIM)
+library (visdat)
+library (corrplot)
+library (grid)
+library (gridExtra)
+library (sm)
+library (mice)
+library (tidyverse)
+```
+
+
+```{r}
+#LOAD DATA
+df <- read.csv("Location CSVs/df_Perth.csv", stringsAsFactors = T)
+
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+#LIST VARIABLES
+str(df)
+```
+```{r}
+#FILTER DATA BY LOCATION
+df_Airport <- df[which(df$Location == "PerthAirport"),]
+df_Perth <- df[which(df$Location == "Perth"),]
+
+#COMPARE DATE RANGES
+
+#Detecting Missing Dates from date range for Perth Airport
+date_range_PerthAir <- seq(min(df_Airport$Date), max(df_Airport$Date), by = 1) 
+missing_dates_PerthAir <- date_range_PerthAir[!date_range_PerthAir %in% df_Airport$Date] 
+
+#Detecting Missing Dates from date range for Perth City
+date_range_Perth <- seq(min(df_Perth$Date), max(df_Perth$Date), by = 1) 
+missing_dates_Perth <- date_range_Perth[!date_range_Perth %in% df_Perth$Date]
+
+#Check if dates missing from Perth & PerthAirport are identical
+all(missing_dates_PerthAir == missing_dates_Perth)
+```
+
+Both locations are missing April 2011, December 2012, and February 2013.
+The city of Perth has data available starting 6 months earlier than Perth Airport.
+Perth has data starting July 1, 2008 and Perth Airport has data starting on January 1, 2009.
+
+Let's check which location is missing more data.
+
+```{r}
+#Check which data is missing from the airport
+
+#Detecting missing data by row
+mis_ind_A = rowSums(is.na(df_Airport))
+m1_A<-which(mis_ind_A>0)
+df_NAs_A <- df_Airport[m1_A,]
+table(mis_ind_A)
+
+# Detecting Missing Values by Column as count
+mis_col_A <- colSums(is.na(df_Airport))
+mis_col_A
+```
+```{r}
+#Check which data is missing from the city of Perth
+
+#Detecting missing data by row
+mis_ind_P = rowSums(is.na(df_Perth))
+m1_P<-which(mis_ind_P>0)
+df_NAs_P <- df_Perth[m1_P,]
+table(mis_ind_P)
+
+# Detecting Missing Values by Column as count
+mis_col_P <- colSums(is.na(df_Perth))
+mis_col_P
+```
+The city of Perth has more complete data, so going forward, we will use only the Perth location and check use the Airport location as a secondary data set to impute missing values.
+
+```{r}
+#Changing variable names and removing duplicates for ease of re-using code.
+df_Both <- df
+df <- df_Perth
+df_NAs <- df_NAs_P
+rm (df_Perth)
+rm (df_NAs_P)
+```
+
+```{r}
+#SUMMARIZE DATA BY COLUMN
+summary(df)
+```
+
+```{r}
+#HISTOGRAMS AND CORRELATION PLOTS FOR COMPLETE NUMERIC OBSERVATIONS
+nums <- unlist(lapply(df, is.numeric)) 
+numrain_data<-df[ , nums]
+numrain_data<-subset(numrain_data,complete.cases(numrain_data))
+a<-names(numrain_data)
+a<-as.list(a)
+
+fun02<-function(i){index=grep(i,names(numrain_data))
+bw <- nclass.Sturges(numrain_data[,index]) # Freedman-Diaconis
+nm=paste0(i)
+assign(paste("g",i,sep=""),
+       ggplot(numrain_data, aes(numrain_data[,index])) +  
+         geom_histogram(bins = bw,aes(y=..density..), fill="#de2d26") +
+         geom_density(alpha=.35, fill="#08519c",color = NA)  +
+         geom_vline (aes(xintercept=median(numrain_data[,index])),color="#08519c", size=1) + 
+         labs(title=nm, x=NULL, y="UPAS")) +
+  theme(plot.title = element_text(size = rel(0.7),face ="bold",hjust = 0.5),
+        axis.title.y = element_text(size = rel(0.4)),
+        axis.text = element_text(size = rel(0.4)))
+}
+Histos<-lapply(a[-1],fun02)
+do.call(grid.arrange, Histos)
+
+cor_matrix = cor(numrain_data[,c(4:19)]) #starting from column 4: MinTemp
+corrplot(cor_matrix, method = 'number') # colorful number
+
+```
+
+# Detecting Missing Data
+
+Missing data from the wind direction was imputed in a previous .r file.
+
+```{r}
+#DETECT MISSING DATA
+# Missing Data Graphs
+vis_miss(df)
+
+aggr(df, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), 
+     cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+Humidity 9am is the variable missing the most observations, with 9 missing,
+followed by Humidity 3pm with 8 missing. The rest of the variables are fairly complete,
+with 4 or fewer missing observations.
+
+```{r}
+#DEFINING COLORS FOR SIDE BY SIDE HISTOGRAMS
+c1 <- rgb(173,216,230, max=255, alpha=80, names = "lt.blue") #create transparent color
+c2 <- rgb(255,192,203, max=255, alpha=80, names = "lt.pink") # create transparent color
+```
+
+```{r}
+#CHECK NAs FOR HUMIDITY9AM
+#create variable to identify rows that are missing Humidity9am
+na_Humid9 <- which(is.na(df_NAs$Humidity9am))
+#create dataframe to check summary statistics of observations missing Humidity9am
+df_NA_Humid9<- df_NAs[na_Humid9,]
+summary(df_NA_Humid9)
+df_NA_Humid9
+
+#Plotting histograms side by side for Pressure9am in full data set vs on days when
+#Humidity9am is NA
+
+Pres9_full <- df$Pressure9am
+Pres9_Humid9NA <- df_NA_Humid9$Pressure9am
+b <- min(c(Pres9_full,Pres9_Humid9NA), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(Pres9_full,Pres9_Humid9NA), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=20) # Make a neat vector for the breakpoints
+hgPres9 <- hist(Pres9_full, breaks = ax, plot = FALSE) # Save first histogram data
+hgPres9_Humid9NA <- hist(Pres9_Humid9NA, breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgPres9_Humid9NA, col=c2, freq=FALSE, main="Side by Side Histograms for Pressure9am",
+     xlab="Pressure at 9am",) # Plot 1st histogram using a transparent color
+plot(hgPres9, col=c1, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topright", c("All Days", "Days with Humidity9am NA"), fill=c(c1,c2))
+
+```
+The Humidity at 9am measure is not missing randomly. There are 5 consecutive days from
+December 29, 2008 - January 2, 2009 that are missing the measurement. 4 of those days
+are also missing the measurement for Humidity at 3pm.
+
+```{r}
+#CHECK NAs FOR HUMIDITY3PM
+#create variable to identify rows that are missing Humidity 3pm
+na_Humid3 <- which(is.na(df_NAs$Humidity3pm))
+#create dataframe to check summary statistics of observations missing Humidity 3pm
+df_NA_Humid3<- df_NAs[na_Humid3,]
+summary(df_NA_Humid3)
+df_NA_Humid3
+
+#Plotting histograms side by side for Pressure9am in full data set vs on days when
+#Humidity3pm is NA
+
+Pres9_full <- df$Pressure9am
+Pres9_Humid3NA <- df_NA_Humid3$Pressure9am
+b <- min(c(Pres9_full,Pres9_Humid3NA), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(Pres9_full,Pres9_Humid3NA), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=20) # Make a neat vector for the breakpoints
+hgPres9 <- hist(Pres9_full, breaks = ax, plot = FALSE) # Save first histogram data
+hgPres9_Humid3NA <- hist(Pres9_Humid3NA, breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgPres9_Humid3NA, col=c2, freq=FALSE, main="Side by Side Histograms for Pressure9am",
+     xlab="Pressure at 9am",) # Plot 1st histogram using a transparent color
+plot(hgPres3, col=c1, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topright", c("All Days", "Days with Humidity3pm NA"), fill=c(c1,c2))
+
+```
+Humdity at 3pm is missing 4 days in common with Humidity at 9am, and the other days appear to be
+missing randomly. One of the observations on November 9, 2011 is also missing Pressure at 3pm, 
+Temperature at 3pm, and Wind Gust Speed.
+
+```{r}
+#CHECK NAs FOR SUNSHINE
+#create variable to identify rows that are missing Sunshine
+na_Sunshine <- which(is.na(df_NAs$Sunshine))
+#check rows of observations missing Sunshine
+df_NAs[na_Sunshine,]
+```
+There are two days in a row missing the Sunshine measure. November 27 & 28, 2011. The other days appear
+to be missing randomly.
+
+```{r}
+#CHECK NAs FOR WIND GUST SPEED
+#create variable to identify rows that are missing WindGustSpeed
+na_GustSpeed <- which(is.na(df_NAs$WindGustSpeed))
+#check rows of observations missing WindGustSpeed
+df_NAs[na_GustSpeed,]
+
+#Plotting histograms side by side for WindSpeed3pm in full data set vs on days when
+#WindGustSpeed is NA
+
+Speed3pm_full <- df$WindSpeed3pm
+Speed3pm_wgNA <- df_NAs[na_GustSpeed,]$WindSpeed3pm
+b <- min(c(Speed3pm_full,Speed3pm_wgNA), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(Speed3pm_full,Speed3pm_wgNA), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=10) # Make a neat vector for the breakpoints
+hgSpeed3pm <- hist(Speed3pm_full, breaks=ax, plot = FALSE) # Save first histogram data
+hgSpeed3pm_wgNA <- hist(Speed3pm_wgNA,breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgSpeed3pm, col=c1, freq=FALSE, main="Side by Side Histograms for Wind Speed at 3pm",
+     xlab="Wind Speed at 3pm",) # Plot 1st histogram using a transparent color
+plot(hgSpeed3pm_wgNA, col=c2, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topright", c("All Days", "Days with WindGustSpeed NA"), fill=c(c1,c2))
+
+#Check if the value of WindGustDir is only unknown on days when wind gust speed is missing.
+all(which(df$WindGustDir == "unkn") == which(is.na(df$WindGustSpeed)))
+```
+
+WindGustSpeed appears to be missing randomly, other than November 9, 2011 which is also missing some
+of the 3pm measurements. WindGustSpeed is only missing on the days when WindGustDir is also unknown.
+
+```{r}
+#CHECK NAs FOR CLOUD 3PM
+#create variable to identify rows that are missing Cloud3pm
+na_Cloud3 <- which(is.na(df_NAs$Cloud3pm))
+#check rows of observations missing Cloud3pm
+df_NAs[na_Cloud3,]
+
+#CHECK NAs FOR CLOUD 9AM
+#create variable to identify rows that are missing Cloud9am
+na_Cloud9 <- which(is.na(df_NAs$Cloud9am))
+#check rows of observations missing Cloud9am
+df_NAs[na_Cloud9,]
+```
+There are only 3 observations missing of Cloud3pm, and all other variables are complete on those days.
+Two of the days are close to each other, both in April 2009.
+
+There is only one observation missing for Cloud9am and it appears to be random. No other values
+are missing for the same date.
+
+```{r}
+#CHECK NAs FOR MAX & MIN TEMPERATURE
+
+#create variable to identify rows that are missing MaxTemp
+na_MaxTemp <- which(is.na(df_NAs$MaxTemp))
+#check rows of observations missing MaxTemp
+df_NAs[na_MaxTemp,]
+
+#create variable to identify rows that are missing MinTemp
+na_MinTemp <- which(is.na(df_NAs$MinTemp))
+#check rows of observations missing MinTemp
+df_NAs[na_MinTemp,]
+```
+There is only one observation missing for MaxTemp and it appears to be random. No other values
+are missing for the same date. MinTemp is not missing any values in the data set.
+
+```{r}
+
+#CHECK NAs for Temp3pm
+#create variable to identify rows that are missing Temp3pm
+na_Temp3 <- which(is.na(df_NAs$Temp3pm))
+#check rows of observations missing Temp3pm
+df_NAs[na_Temp3,]
+```
+Temperature at 3pm is only missing on November 9, 2011 which is also missing other 3pm measurements, but a
+Maximum temperature is available for that day.
+
+```{r}
+#CHECK NAs for PRESSURE
+
+#create variable to identify rows that are missing Pressure9am
+na_Pres9 <- which(is.na(df_NAs$Pressure9am))
+#check rows of observations missing Pressure9am
+df_NAs[na_Pres9,]
+
+#create variable to identify rows that are missing Pressure3pm
+na_Pres3 <- which(is.na(df_NAs$Pressure3pm))
+#check rows of observations missing Pressure9am
+df_NAs[na_Pres3,]
+```
+
+There is only one observation missing for Pressure9am and it appears to be random. No other values
+are missing for the same date.
+
+Pressure3pm is only missing one observation on November 9, 2011 with the other 3pm measurements.
+
+NEXT STEP: IMPUTE MISSING VALUES FROM AIRPORT OR FROM MICE.
+
+
+
+
+
+
+
+
+
