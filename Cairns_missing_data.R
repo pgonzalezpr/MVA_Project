@@ -9,9 +9,10 @@ library (grid)
 library (gridExtra)
 library (sm)
 library (mice)
+library (tidyverse)
 
 #LOAD DATA
-df <- read.csv("df_Cairns.csv", stringsAsFactors = T)
+df <- read.csv("Location CSVs/df_Cairns.csv", stringsAsFactors = T)
 
 #CHANGE VARIABLE TYPE
 df$Date <- as.Date(df$Date)
@@ -258,8 +259,8 @@ df[,c("Month","MinTemp","MaxTemp","Rainfall","Evaporation",
 #IMPUTE RAINTODAY & RAINTOMORROW
 
 #Fill RainToday & RainTomorrow NAs with appropriate values based on Rainfall.
-#identify rows which are missing RainToday & Rainfall > .01 and impute "Yes"
-na_RainYes <- which(is.na(df$RainToday) & (df$Rainfall > .01))
+#identify rows which are missing RainToday & Rainfall > 1mm and impute "Yes"
+na_RainYes <- which(is.na(df$RainToday) & (df$Rainfall > 1))
 df[na_RainYes,]$RainToday <- "Yes"
 #identify dates from imputed values
 dates_RainYes <- df[na_RainYes,]$Date
@@ -270,7 +271,7 @@ na_RainTomYes <- which(df$Date == dates_RainTomYes)
 df[na_RainTomYes,]$RainTomorrow <- "Yes"
 
 summary(df)
-
+ 
 #All NAs are filled, write new .csv to use for imputing time series.
 #write.csv(df,'df_Cairns_MICE.csv', row.names = FALSE)
 
