@@ -3,7 +3,7 @@ library (lubridate)
 library (dplyr)
 library (ggplot2)
 library (VIM)
-library( visdat)
+library (visdat)
 library (corrplot)
 library (grid)
 library (gridExtra)
@@ -12,6 +12,7 @@ library (mice)
 library (tidyverse)
 
 #LOAD DATA
+
 df <- read.csv("Location CSVs/df_Cairns.csv", stringsAsFactors = T)
 
 #CHANGE VARIABLE TYPE
