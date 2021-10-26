@@ -389,6 +389,11 @@ summary(df4)
 Once we've filled and recomputed all the available and logically-imputable variables, we can proceed with MICE again.
 
 ```{r}
+df4_backup <- df4
+
+df4 <- subset(df4, Month %in% c("diciembre","enero","febrero","marzo","abril"))
+summary(df4)
+
 md.pattern(df4)
 
 tempData4 <- mice(df4[,c("Month","MinTemp","MaxTemp","TempRange","Rainfall","Evaporation",
@@ -396,7 +401,7 @@ tempData4 <- mice(df4[,c("Month","MinTemp","MaxTemp","TempRange","Rainfall","Eva
                        "WindDir3pm","WindSpeed9am","WindSpeed3pm","Humidity9am",
                        "Humidity3pm","Pressure9am","Pressure3pm","Cloud9am",
                        "Cloud3pm","Temp9am","Temp3pm")],m=3,set.seed(2))
-  tempData4$meth
+tempData4$meth
 summary(tempData4)
 completedData4 <- complete(tempData4,1)
 xyplot(tempData4,Evaporation ~ Humidity9am+Humidity3pm,pch=18,cex=1)
@@ -437,7 +442,7 @@ evaporation
 #Pressure
 pressure9 <- ggplot() + geom_point(data = df, aes(x = Date, y = Pressure9am), color = "orange")
 pressure9 <- pressure9 + geom_point(data = subset(df4, Date %in% missing_Dates$Date), 
-                                  aes(x = Date, y = Pressure9am), color = "darkorchid4") + labs(title = "Pressure 9 AM",
+                                  aes(x = Date, y = Pressure9am), color = "darkorange2") + labs(title = "Pressure 9 AM",
        y = "Pressure (hPa)",
        x = "Date") + theme_bw(base_size = 15)
 pressure9
