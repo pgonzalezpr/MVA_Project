@@ -49,14 +49,14 @@ summary(df)
 A subset from the original dataset containing relevant variables for the MCA is taken. 
 Variables are ordered in a convenient way for grouping purposes. Selecting the groups is critical 
 for MCA. Groups should ideally be defined in a way that each one of them contains variables that can somehow 
-be collectively interpreted. In a given group, all variables should be of the same data type. In this case, group # 7 (variables associated with wind direction) is taken as a supplementary variable for the analysis, as it seems to severely affect its performance. 
+be collectively interpreted. In a given group, all variables should be of the same data type. In this case, group # 7 (season variable) is taken as a supplementary variable for the analysis, as it is not relevant and is included only for labeling purposes.
 
 ```{r} 
 #MCA
 
 df_MFA <- subset(df, ,c("WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "MinTemp", "MaxTemp", "Temp9am", "Temp3pm", "Evaporation", "Sunshine", "Cloud9am", "Cloud3pm", "Rainfall", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm",  "WindGustDir","WindDir9am","WindDir3pm", "RainToday","RainTomorrow", "Season"))
 
-res.mfa <- MFA(df_MFA, group = c(3, 4, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = c(5,7), graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY, IT IS ONLY FOR PLOTTING PURPOSES
+res.mfa <- MFA(df_MFA, group = c(3, 4, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = 7, graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY, IT IS ONLY FOR PLOTTING PURPOSES
 
 # Eigenvalues, cummulative variance and scree plot
 
@@ -65,6 +65,21 @@ head(eig.val)
 fviz_screeplot(res.mfa,addlabels = TRUE)
 
 ```
+
+The scree plot shows that including all variables in the MFA analysis produce poor results, with only 15% of the variance captured by the two first dimensions, which is far too low. Some iterations of the grouping step show that taking the group related to wind directions as a supplementary variable significantly improves the results. 
+
+```{r}
+
+res.mfa <- MFA(df_MFA, group = c(3, 4, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = c(5, 7), graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY
+
+# Eigenvalues, cummulative variance and scree plot
+
+eig.val <- get_eigenvalue(res.mfa)
+head(eig.val)
+fviz_screeplot(res.mfa,addlabels = TRUE)
+
+```
+
 
 The scree plot shows that for the defined groups, the first two dimensions account for a bit more than 50% of the variance. 80% of the variance is not reached until dimension #5, which is a substantial reduction from the original amount of features. Although this is not an ideal outcome, for interpretation purposes, taking only the first two dimensions is useful for understanding the relation between variables. 
 
