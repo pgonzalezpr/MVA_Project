@@ -1,0 +1,215 @@
+---
+title: "BrisbaneMFA"
+title: 'Group 1: Multivariate analysis of australian climate data'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo Gonzalez, Mateo Jacome
+  Gonzalez y Pedro Gonzalez Prado
+output:
+  html_document:
+    self_contained: false
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+
+# CLEARING ENVIRONMENT #
+
+rm(list=ls(all=TRUE))
+
+#PREPARE WORK DIRECTORY 
+
+current_path <- getActiveDocumentContext()$path 
+setwd(dirname(current_path ))
+
+```
+
+PACKAGES
+
+```{r}
+library(FactoMineR)
+library(factoextra)
+```
+
+LOAD AND SUMMARIZE DATA
+
+
+```{r} 
+
+df <- read.csv("Location CSVs/df_Brisbane_MICE.csv",sep=",",stringsAsFactors = T)
+df$Date <- as.Date(df$Date)
+df$Season[df$Month %in% c("September", "October", "November")]<-"Spring"
+df$Season[df$Month %in% c("December", "January", "February")]<-"Summer"
+df$Season[df$Month %in% c("March", "April", "May")]<-"Autumn"
+df$Season[df$Month %in% c("June", "July", "August")]<-"Winter"
+df <- relocate(df, Season, .before = Location)
+colnames(df)
+summary(df)
+
+```
+
+A subset from the original dataset containing relevant variables for the MCA is taken. 
+Variables are ordered in a convenient way for grouping purposes. Selecting the groups is critical 
+for MCA. Groups should ideally be defined in a way that each one of them contains variables that can somehow 
+be collectively interpreted. In a given group, all variables should be of the same data type. In this case, group # 7 (variables associated with wind direction) is taken as a supplementary variable for the analysis, as it seems to severely affect its performance. 
+
+```{r} 
+#MCA
+
+df_MFA <- subset(df, ,c("WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "MinTemp", "MaxTemp", "Temp9am", "Temp3pm", "Evaporation", "Sunshine", "Cloud9am", "Cloud3pm", "Rainfall", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm",  "WindGustDir","WindDir9am","WindDir3pm", "RainToday","RainTomorrow", "Season"))
+
+res.mfa <- MFA(df_MFA, group = c(3, 4, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = c(5,7), graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY, IT IS ONLY FOR PLOTTING PURPOSES
+
+# Eigenvalues, cummulative variance and scree plot
+
+eig.val <- get_eigenvalue(res.mfa)
+head(eig.val)
+fviz_screeplot(res.mfa,addlabels = TRUE)
+
+```
+
+The scree plot shows that for the defined groups, the first two dimensions account for a bit more than 50% of the variance. 80% of the variance is not reached until dimension #5, which is a substantial reduction from the original amount of features. Although this is not an ideal outcome, for interpretation purposes, taking only the first two dimensions is useful for understanding the relation between variables. 
+
+
+Graphs of Variables
+
+```{r}
+
+group <- get_mfa_var(res.mfa, "group")
+group
+fviz_mfa_var(res.mfa, "group")
+# Coordinates of groups
+group$coord
+# Cos2: quality of representation on the factore map
+group$cos2
+
+```
+
+The Variable groups plot shows the correlation between the categories and the MFA dimensions. Note that groups Sunlight, RainBoolean and ExternalFactors have relatively similar contributions to dimension 1, while the group containing temperature variables contributes the most to dimension 2, followed by ExternalFactors.   
+
+
+Contributions per group to dimensions. 
+
+```{r}
+
+# Contribution to the first dimension
+fviz_contrib(res.mfa, "group", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.mfa, "group", axes = 2)
+# Contributions to the  dimensions
+group$contrib
+
+```
+
+This barplot confirms that ExternalFactors, Sunlight and RainBoolean groups contribute almost identically to dimension 1, and Temperature has a high contribution to dimension 2. 
+
+
+Quantitative variables
+
+```{r}
+quanti.var <- get_mfa_var(res.mfa, "quanti.var")
+quanti.var
+
+#Coordinates
+quanti.var$coord
+# Cos2: quality on the factore map
+quanti.var$cos2
+# Contributions to the dimensions
+quanti.var$contrib
+
+```
+
+Correlations between variables and dimensions
+
+```{r}
+
+fviz_mfa_var(res.mfa, "quanti.var", palette = "jco", 
+             col.var.sup = "violet", repel = TRUE)
+```
+
+The correlation circle suggests that dimension 1 is mostly correlated with Wind speed and Temperature variables, while dimension 2 is more correlated with cloudiness, rainfall and humidity. This plot also shows that there is some opposite correlation between pressure variables and certain temperature variables, as well as between humidity and sunshine. The rainfall variable is not particularly correlated with any variable. Lastly, all variables are reasonably well represented on the factor map, as indicated by the distance from the origin.  
+
+
+Contributions to dimension 1
+
+```{r}
+
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 1, top = 20,
+             palette = "jco")
+
+```
+
+Contributions to dimension 2
+
+```{r}
+
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 2, top = 20,
+             palette = "jco")
+
+```
+
+The contribution of quantitative variables histograms evidence that, within the ExternalFactors group, the variables related to humidity contribute the most to dimension 1, along with cloudiness and sunshine. Evaporation does not contribute much within the sunlight group. On the other hand, concerning dimension 2, the most important external factor is pressure, whereas contributions by the others is almost negligible. All temperature values are similarly important for dimension 2. 
+
+
+Overall contribution
+
+```{r}
+
+fviz_mfa_var(res.mfa, "quanti.var", col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE,
+             geom = c("point", "text"))
+
+```
+
+This plot shows that the overall most contributing variables are those related to humidity, pressure, cloudiness as well as sunshine. Notice that wind speed variables have little overall contribution. 
+
+
+
+Quality of representation(cos2)
+
+```{r}
+
+fviz_mfa_var(res.mfa, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE)
+
+```
+
+The cos2 plot suggests that most variables are reasonably well represented by the first two dimensions. Wind-related variables, evaporation and rainfall have the lowest overall cos2 values, so more than two dimensions may be needed to capture these variables.
+
+
+
+Analysis of individuals
+
+```{r}
+ind <- get_mfa_ind(res.mfa)
+ind
+fviz_mfa_ind(res.mfa, 
+             habillage = "RainTomorrow", # color by groups 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE, invisible = "quali.var", geom = "point")
+
+#####
+fviz_ellipses(res.mfa, c("RainTomorrow", "RainToday"), repel = TRUE, geom = "point")
+
+
+```
+
+From the individuals plots, it is very clear that rainy days are separated from days with no rain. In particular, they are separated across dimension 1. Dimension 1 is mostly related to humidity and cloudiness, so these variables tend to be higher during days with rain and lower during days without rain, which makes sense. There is not a clear distinction between days with rain and days without rain as far as dimension 2 is concerned. This suggests that the important variables for this dimensions, pressure and temperature, are not so critical in determining rain. Note that there is more variability (wider range) for higher values of dimension 1 (days with rain) than for the negative ones, which may imply that days with no rain tend to have more consistent conditions.   
+
+
+
+
+Labeling observations by seasons
+
+```{r}
+
+fviz_mfa_ind(res.mfa, 
+             habillage = "Season",
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE, 
+             invisible = "quali.var", geom = "point")
+```
+
+It is observed that while Summer and Winter are clearly separated, there is significant overlap between Autumn and Spring, implying that these seasons do not differ much in terms of weather. In this case, Autumn and Winter differ across dimension 2, which is fairly consistent with reality because temperature was a relevant feature for dimension 2. 
+
