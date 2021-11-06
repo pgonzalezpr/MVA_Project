@@ -113,15 +113,20 @@ MaxTemp and Evaporation are correlated so may be interesting to look at.
 ```{r}
 autTemp <- autumn[,c("MaxTemp","Evaporation")]
 colorData <- color.plot(autTemp, quan=1/2, alpha=0.025, sub='Summer MaxTemp vs Evaporation')
+autTempOutliers <- (colorData$outliers)
 
 sprTemp <- spring[,c("MaxTemp","Evaporation")]
 colorData <- color.plot(sprTemp, quan=1/2, alpha=0.025, sub='Autumn MaxTemp vs Evaporation')
+sprTempOutliers <- (colorData$outliers)
 
 sumTemp <- summer[,c("MaxTemp","Evaporation")]
 colorData <- color.plot(sumTemp, quan=1/2, alpha=0.025, sub='Autumn MaxTemp vs Evaporation')
+sumTempOutliers <- (colorData$outliers)
 
 winTemp <- winter[,c("MaxTemp","Evaporation")]
 colorData <- color.plot(winTemp, quan=1/2, alpha=0.025, sub='Autumn MaxTemp vs Evaporation')
+winTempOutliers <- (colorData$outliers)
+
 ```
 
 Humidity9am and Humidity3pm are also correlated so may be interesting to look at.
@@ -130,15 +135,19 @@ A change in humidity could be related to rainfall.
 ```{r}
 autHum <- autumn[,c("Humidity9am","Humidity3pm")]
 colorData <- color.plot(autHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+dfAutHumOutliers <- autumn[which(colorData$outliers),]
 
 sprHum <- spring[,c("Humidity9am","Humidity3pm")]
 colorData <- color.plot(sprHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+dfSprHumOutliers <- spring[which(colorData$outliers),]
 
 sumHum <- summer[,c("Humidity9am","Humidity3pm")]
 colorData <- color.plot(sumHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+dfSumHumOutliers <- summer[which(colorData$outliers),]
 
 winHum <- winter[,c("Humidity9am","Humidity3pm")]
 colorData <- color.plot(winHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+dfWinHumOutliers <- winter[which(colorData$outliers),]
 
 ```
 
