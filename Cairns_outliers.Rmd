@@ -3,7 +3,7 @@ title: "Outliers"
 output: html_document
 ---
 
-# Outliers Perth
+# Outliers Brisbane
 ```{r}
 library(chemometrics)
 library(DMwR2)
@@ -12,7 +12,7 @@ library(VIM)
 library(ggplot2)
 library(GGally)
 
-df <- read.csv("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/MVA_Project-main/Location CSVs/df_Brisbane_MICE.csv")
+df <- read.csv("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/MVA_Project-main/Location CSVs/df_Cairns_MICE.csv")
 
 ```
 
@@ -27,7 +27,7 @@ df.active <- df[, c("MinTemp", "MaxTemp", "Rainfall", "Evaporation", "Sunshine",
 
 ```{r}
 
-invisible(lapply(1:ncol(df.active), function(i) Boxplot(df.active[, i], ylab='', main=paste("Boxplot", names(df.active)[i], sep=" "), col='orange3', id=list(location='avoid'))))
+invisible(lapply(1:ncol(df.active), function(i) Boxplot(df.active[, i], ylab='', main=paste("Boxplot", names(df.active)[i], sep=" "), col='green3', id=list(location='avoid'))))
 
 out <- boxplot.stats(df.active$Pressure9am)$out
 out_ind <- which(df.active$Pressure9am %in% c(out))
@@ -36,22 +36,28 @@ Y<- data.frame(df.active[out_ind, ],df[out_ind,1])
 Y
 
 median(df$Rainfall)
+
+df_ordenado <- df.active[order(df.active$WindSpeed9am), ]
+head(df_ordenado)
+df_ordenado
 ```
 
 We can observe that the principal outliers are:
-- Boxplot MaxTemp observation 1044
-- Boxplot Rainfall observations <b>1274, 1612</b>, 597, 924...
-- Boxplot Evaporation observations 472, 146, 833, 895 and 1261
-- Boxplot WindGustSpeed observation <b>470</b>, 143, 1611, 1571, 1612, 146, 773...
-- Boxplot WindSpeed9am observation <b>1612</b>, 838, 146, 1535, 471...
-- Boxplot WindSpeed3pm observations 471, 773, 152, 146
-- Boxplot Humidity9am observations 471, 474, 422, 454, 472, 473, 1501, 452...
-- Boxplot Humidity3pm observations 422, 450, 453, 1368, 1617, 471, 455, 454...
-- Boxplot Pressure9am observations 1612, 145, 1268, 146, 1230...
-- Boxplot Pressure3pm observations 145, 146, 1612, 1593, 1286...
-- Boxplot Temp3pm observations 1260, 1044
+- Boxplot MinTemp observations 901, 963, 935, 936, 1321, 898...
+- Boxplot MaxTemp observations 1460, 1458, 431, 1242, 910, 177...
+- Boxplot Rainfall observations <b>43, 796</b>, 1023, 817, 1176...
+- Boxplot Evaporation observations 752, 198, 638, 1235, 1200, 1177...
+- Boxplot WindGustSpeed observation <b>794</b>, 1454, 1504, 795, 420, 1534, 1484
+- Boxplot WindSpeed9am observation 1524, 794, 286, 689, 615...
+- Boxplot WindSpeed3pm observations 469, 987, 944, 821, 455, 415
+- Boxplot Humidity9am observations 1320, 309, 984, 1321, 955
+- Boxplot Humidity3pm observations 818, 795, 96, 298, 309...
+- Boxplot Pressure9am observations 1454, 1130, 1455, 1129, 1131...
+- Boxplot Pressure3pm observations 1130, 1454, 1129, 1455, 1456...
+- Boxplot Temp9am observations 898, 934, 901
+- Boxplot Temp3pm observations 242, 948
 
-We can see that the observations with most of the variables with outliers are: 1612, 146, 471 
+We can see that the observations with most of the variables with outliers is 1454. We also need to destacate that the observations 43 and 796 are strong outliers of the variable Rainfall, and the observation 794 that is a strong outlier of the variable WindGustSpeed. 
 
 # DETECTING MULTIVARIATE OUTLIERS WITH MAHALANOBIS DSTANCE
 
@@ -64,7 +70,7 @@ Z1 <- data.frame(df.active[mdi>cutoff,],df[mdi>cutoff,1])
 Z1
 
 # We select the ones with the greatest Mahalanobis distance
-cutoff<-80
+cutoff<-65
 Z2 <- data.frame(df.active[mdi>cutoff,],df[mdi>cutoff,1])
 Z2
 ```
@@ -96,12 +102,12 @@ B1 <- data.frame(df.active[b,],df[b,1])
 B1
 
 # We select the ones with the greatest Mahalanobis distance
-b<-which(dis$rd>10)
+b<-which(dis$rd>9.5)
 
 B2 <- data.frame(df.active[b,],df[b,1])
 B2
 ```
-We can see that the ones with largest Mahalanobis robust distance are observations 899, 470 and 1612.
+We can see that the ones with largest Mahalanobis robust distance is observation 794.
 
 # DETECTING MULTIVARIATE OUTLIERS BY DENSITY OF LOCAL DISTANCES
 .
@@ -116,8 +122,8 @@ sort(outlier.scores,decreasing=T)[1:3]
 print(df[outliers,])
 
 ```
-We select the top 3 outliers that corresponds with observations 470, 1274 and 1612.
-We should remove these outliers and then treat them as missing data.
+We select the top 3 outliers that corresponds with observations 794, 43 and 796
+We should remove these outliers and then treat them as missing data. 
 
 
 
