@@ -1,0 +1,123 @@
+---
+title: "Outliers"
+output: html_document
+---
+
+# Outliers Brisbane
+```{r}
+library(chemometrics)
+library(DMwR2)
+library(missForest)
+library(VIM)
+library(ggplot2)
+library(GGally)
+
+df <- read.csv("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/MVA_Project-main/Location CSVs/df_Brisbane_MICE.csv")
+
+```
+
+We use only the numeric variables:
+
+```{r}
+names(df)
+df.active <- df[, c("MinTemp", "MaxTemp", "Rainfall", "Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm")]
+```
+
+# DETECTING UNIVARIATE OUTLIERS BOXPLOT
+
+```{r}
+
+invisible(lapply(1:ncol(df.active), function(i) Boxplot(df.active[, i], ylab='', main=paste("Boxplot", names(df.active)[i], sep=" "), col='orange3', id=list(location='avoid'))))
+
+out <- boxplot.stats(df.active$Pressure9am)$out
+out_ind <- which(df.active$Pressure9am %in% c(out))
+out_ind
+Y<- data.frame(df.active[out_ind, ],df[out_ind,1])
+Y
+
+median(df$Rainfall)
+```
+
+We can observe that the principal outliers are:
+- Boxplot MaxTemp observation 1044
+- Boxplot Rainfall observations <b>1274, 1612</b>, 597, 924...
+- Boxplot Evaporation observations 472, 146, 833, 895 and 1261
+- Boxplot WindGustSpeed observation <b>470</b>, 143, 1611, 1571, 1612, 146, 773...
+- Boxplot WindSpeed9am observation <b>1612</b>, 838, 146, 1535, 471...
+- Boxplot WindSpeed3pm observations 471, 773, 152, 146
+- Boxplot Humidity9am observations 471, 474, 422, 454, 472, 473, 1501, 452...
+- Boxplot Humidity3pm observations 422, 450, 453, 1368, 1617, 471, 455, 454...
+- Boxplot Pressure9am observations 1612, 145, 1268, 146, 1230...
+- Boxplot Pressure3pm observations 145, 146, 1612, 1593, 1286...
+- Boxplot Temp3pm observations 1260, 1044
+
+We can see that the observations with most of the variables with outliers are: 1612, 146, 471. We also need to destacate that the observations 1274 and 1612 are strong outliers of the variable Rainfall, the observation 470 that is a strong outlier of the variable WindGustSpeed, and observation 1612 that is a strong outlier of the variable WindSpeed9am. 
+
+# DETECTING MULTIVARIATE OUTLIERS WITH MAHALANOBIS DSTANCE
+
+```{r}
+mdi = mahalanobis(df.active, center=apply(df.active,2,mean),cov=var(df.active))
+plot(density(mdi))
+cutoff <- qchisq(p = 0.99 , ncol(df.active))
+## Display observation whose distance greater than cutoff value
+Z1 <- data.frame(df.active[mdi>cutoff,],df[mdi>cutoff,1])
+Z1
+
+# We select the ones with the greatest Mahalanobis distance
+cutoff<-80
+Z2 <- data.frame(df.active[mdi>cutoff,],df[mdi>cutoff,1])
+Z2
+```
+We can see that almost all of the outliers detected with the mahalanobis distance where the same that we detected with the boxplot.
+
+# DETECTING MULTIVARIATE OUTLIERS USING Moutlier function
+
+```{r}
+library(chemometrics)
+dis <- Moutlier(df.active[,c(1:2,4:16)], quantile = 0.99, plot=FALSE)
+str(dis)
+par(mfrow=c(1,1))
+plot(dis$md,dis$rd)
+text(dis$md,dis$rd,labels=rownames(df))
+abline(h=dis$cutoff, col="red")
+abline(v=dis$cutoff, col="red")
+
+cut<-rep(dis$cutoff,nrow(df.active))
+cutoff
+# As we have a long dataset we use better the robust distance
+
+plot(dis$md)
+text(dis$md,labels=rownames(df))
+lines(cut,col=2)
+dis$cutoff
+b<-which(dis$rd>dis$cutoff)
+
+B1 <- data.frame(df.active[b,],df[b,1])
+B1
+
+# We select the ones with the greatest Mahalanobis distance
+b<-which(dis$rd>10)
+
+B2 <- data.frame(df.active[b,],df[b,1])
+B2
+```
+We can see that the ones with largest Mahalanobis robust distance are observations 899, 470 and 1612.
+
+# DETECTING MULTIVARIATE OUTLIERS BY DENSITY OF LOCAL DISTANCES
+.
+```{r}
+outlier.scores <- lofactor(df.active, k=5)
+plot(density(outlier.scores))
+# pick top 3 outliers
+outliers <- order(outlier.scores, decreasing=T)[1:3]
+outliers
+sort(outlier.scores,decreasing=T)[1:3]
+# who are outliers
+print(df[outliers,])
+
+```
+We select the top 3 outliers that corresponds with observations 470, 1274 and 1612.
+We should remove these outliers and then treat them as missing data.
+
+
+
