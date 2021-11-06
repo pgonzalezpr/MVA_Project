@@ -1,0 +1,224 @@
+---
+title: "PerthMFA"
+title: 'Group 1: Multivariate analysis of australian climate data'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo Gonzalez, Mateo Jacome
+  Gonzalez y Pedro Gonzalez Prado
+output:
+  html_document:
+    self_contained: false
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+
+# CLEARING ENVIRONMENT #
+
+rm(list=ls(all=TRUE))
+
+#PREPARE WORK DIRECTORY 
+
+current_path <- getActiveDocumentContext()$path 
+setwd(dirname(current_path ))
+saveimages <- "PlotsMFA/Perth/"
+
+```
+
+PACKAGES
+
+```{r}
+library(FactoMineR)
+library(factoextra)
+```
+
+LOAD AND SUMMARIZE DATA
+
+
+```{r} 
+
+df <- read.csv("Completed_Location_CSVs/df_Perth_completed.csv",sep=",",stringsAsFactors = T)
+df$Date <- as.Date(df$Date)
+colnames(df)
+summary(df)
+
+```
+
+
+```{r} 
+#MFA
+
+df_MFA <- subset(df, ,c("WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "MinTemp", "MaxTemp", "TempRange", "Temp9am", "Temp3pm", "Evaporation", "Sunshine", "Cloud9am", "Cloud3pm", "Rainfall", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm",  "WindGustDir","WindDir9am","WindDir3pm", "RainToday","RainTomorrow", "Season"))
+
+res.mfa <- MFA(df_MFA, group = c(3, 5, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = 7, graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY, IT IS ONLY FOR PLOTTING PURPOSES
+
+# Eigenvalues, cummulative variance and scree plot
+
+eig.val <- get_eigenvalue(res.mfa)
+head(eig.val)
+#png(paste(saveimages,"screeplot1.png",sep=""),width = 600, height = 350)
+fviz_screeplot(res.mfa,addlabels = TRUE, title = "Scree plot Perth")
+#dev.off()
+
+```
+
+```{r}
+
+res.mfa <- MFA(df_MFA, group = c(3, 5, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = c(5, 7), graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY
+
+# Eigenvalues, cummulative variance and scree plot
+
+eig.val <- get_eigenvalue(res.mfa)
+head(eig.val)
+#png(paste(saveimages,"screeplot2.png",sep=""),width = 600, height = 350)
+fviz_screeplot(res.mfa,addlabels = TRUE, title = "Scree plot Perth")
+#dev.off()
+
+
+```
+
+
+Graphs of Variables
+
+```{r}
+
+group <- get_mfa_var(res.mfa, "group")
+group
+#png(paste(saveimages,"VariableGroups.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, "group", title ="Variable groups MFA - Perth")
+#dev.off()
+# Coordinates of groups
+group$coord
+# Cos2: quality of representation on the factore map
+group$cos2
+
+```
+
+Contributions per group to dimensions. 
+
+```{r}
+
+# Contribution to the first dimension
+#png(paste(saveimages,"ContribGroupsDim1.png",sep=""),width = 600, height = 350)
+fviz_contrib(res.mfa, "group", axes = 1, title = "Contribution of groups to Dim1 - Perth")
+#dev.off()
+# Contribution to the second dimension
+#png(paste(saveimages,"ContribGroupsDim2.png",sep=""),width = 600, height = 350)
+fviz_contrib(res.mfa, "group", axes = 2, title = "Contribution of groups to Dim2 - Perth")
+#dev.off()
+# Contributions to the  dimensions
+group$contrib
+
+```
+
+Quantitative variables
+
+```{r}
+quanti.var <- get_mfa_var(res.mfa, "quanti.var")
+quanti.var
+
+#Coordinates
+quanti.var$coord
+# Cos2: quality on the factore map
+quanti.var$cos2
+# Contributions to the dimensions
+quanti.var$contrib
+
+```
+
+Correlations between variables and dimensions
+
+```{r}
+#png(paste(saveimages,"QuantitativeVariables.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, "quanti.var", palette = "jco", 
+             col.var.sup = "violet", repel = TRUE, title = "Quantitative Variables MFA - Perth")
+#dev.off()
+```
+
+Contributions to dimension 1
+
+```{r}
+#png(paste(saveimages,"ContribQuantDim1.png",sep=""),width = 600, height = 350)
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 1, top = 20,
+             palette = "jco", title = "Contribution of quantitative variables to Dim1 - Perth")
+#dev.off()
+
+```
+
+Contributions to dimension 2
+
+```{r}
+#png(paste(saveimages,"ContribQuantDim2.png",sep=""),width = 600, height = 350)
+fviz_contrib(res.mfa, choice = "quanti.var", axes = 2, top = 20,
+             palette = "jco", title = "Contribution of quantitative variables to Dim2 - Perth")
+#dev.off()
+```
+
+Overall contribution
+
+```{r}
+#png(paste(saveimages,"ContribQuant.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, "quanti.var", col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE,
+             geom = c("point", "text"), title = "Contribution Quantitative Variables MFA - Perth")
+#dev.off()
+
+```
+
+Quality of representation(cos2)
+
+```{r}
+#png(paste(saveimages,"Cos2QuantVariables.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE, title = "Cos2 Quantitative Variables MFA - Perth")
+#dev.off()
+
+```
+
+Qualitative variables ## RUN THE MFA WITH ALL VARIABLES BEFORE 
+
+```{r}
+quali.var <- get_mfa_var(res.mfa, "quali.var")
+quali.var
+
+#png(paste(saveimages,"QualiVarCat.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, "quali.var", col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE,
+             geom = c("point", "text"), title = "Qualitative variables categories MFA - Perth")
+#dev.off()
+```
+
+Analysis of individuals
+
+```{r}
+ind <- get_mfa_ind(res.mfa)
+ind
+#png(paste(saveimages,"IndsRainTomorrowBool.png",sep=""),width = 600, height = 350)
+fviz_mfa_ind(res.mfa, 
+             habillage = "RainTomorrow", # color by groups 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE, invisible = "quali.var", geom = "point", title = "Individuals MFA - Perth")
+#dev.off()
+
+#####
+#png(paste(saveimages,"IndsRainComparison.png",sep=""),width = 600, height = 350)
+fviz_ellipses(res.mfa, c("RainTomorrow", "RainToday"), repel = TRUE, geom = "point", title = "MFA Factor map - Perth")
+#dev.off()
+
+
+```
+
+Labeling observations by seasons
+
+```{r}
+#png(paste(saveimages,"IndsSeason.png",sep=""),width = 600, height = 350)
+fviz_mfa_ind(res.mfa, 
+             habillage = "Season",
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE, 
+             invisible = "quali.var", geom = "point", title = "Individuals by Season MFA - Perth")
+#dev.off()
+```
+

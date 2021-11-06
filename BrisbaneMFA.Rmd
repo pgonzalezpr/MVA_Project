@@ -19,6 +19,7 @@ rm(list=ls(all=TRUE))
 
 current_path <- getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
+saveimages <- "PlotsMFA/Brisbane/"
 
 ```
 
@@ -34,13 +35,8 @@ LOAD AND SUMMARIZE DATA
 
 ```{r} 
 
-df <- read.csv("Location CSVs/df_Brisbane_MICE.csv",sep=",",stringsAsFactors = T)
+df <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv",sep=",",stringsAsFactors = T)
 df$Date <- as.Date(df$Date)
-df$Season[df$Month %in% c("September", "October", "November")]<-"Spring"
-df$Season[df$Month %in% c("December", "January", "February")]<-"Summer"
-df$Season[df$Month %in% c("March", "April", "May")]<-"Autumn"
-df$Season[df$Month %in% c("June", "July", "August")]<-"Winter"
-df <- relocate(df, Season, .before = Location)
 colnames(df)
 summary(df)
 
@@ -52,31 +48,36 @@ for MCA. Groups should ideally be defined in a way that each one of them contain
 be collectively interpreted. In a given group, all variables should be of the same data type. In this case, group # 7 (season variable) is taken as a supplementary variable for the analysis, as it is not relevant and is included only for labeling purposes.
 
 ```{r} 
-#MCA
+#MFA
 
-df_MFA <- subset(df, ,c("WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "MinTemp", "MaxTemp", "Temp9am", "Temp3pm", "Evaporation", "Sunshine", "Cloud9am", "Cloud3pm", "Rainfall", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm",  "WindGustDir","WindDir9am","WindDir3pm", "RainToday","RainTomorrow", "Season"))
+df_MFA <- subset(df, ,c("WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", "MinTemp", "MaxTemp", "TempRange", "Temp9am", "Temp3pm", "Evaporation", "Sunshine", "Cloud9am", "Cloud3pm", "Rainfall", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm",  "WindGustDir","WindDir9am","WindDir3pm", "RainToday","RainTomorrow", "Season"))
 
-res.mfa <- MFA(df_MFA, group = c(3, 4, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = 7, graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY, IT IS ONLY FOR PLOTTING PURPOSES
+res.mfa <- MFA(df_MFA, group = c(3, 5, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = 7, graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY, IT IS ONLY FOR PLOTTING PURPOSES
 
 # Eigenvalues, cummulative variance and scree plot
 
 eig.val <- get_eigenvalue(res.mfa)
 head(eig.val)
-fviz_screeplot(res.mfa,addlabels = TRUE)
+#png(paste(saveimages,"screeplot1.png",sep=""),width = 600, height = 350)
+fviz_screeplot(res.mfa,addlabels = TRUE, title = "Scree plot Brisbane")
+#dev.off()
 
 ```
 
-The scree plot shows that including all variables in the MFA analysis produce poor results, with only 15% of the variance captured by the two first dimensions, which is far too low. Some iterations of the grouping step show that taking the group related to wind directions as a supplementary variable significantly improves the results. 
+The scree plot shows that including all variables in the MFA analysis produce poor results, with only 18% of the variance captured by the two first dimensions, which is far too low. Some iterations of the grouping step show that taking the group related to wind directions as a supplementary variable significantly improves the results. 
 
 ```{r}
 
-res.mfa <- MFA(df_MFA, group = c(3, 4, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = c(5, 7), graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY
+res.mfa <- MFA(df_MFA, group = c(3, 5, 4, 5, 3, 2, 1), type = c("s", "s", "s", "s","n", "n", "n"), name.group = c("WindSpeed","Temperature","Sunlight","ExternalFactors", "WindDirection", "RainBoolean", "Season"), num.group.sup = c(5, 7), graph = FALSE) #ALWAYS DECLARE "SEASON" AS SUPPLEMENTARY
 
 # Eigenvalues, cummulative variance and scree plot
 
 eig.val <- get_eigenvalue(res.mfa)
 head(eig.val)
-fviz_screeplot(res.mfa,addlabels = TRUE)
+#png(paste(saveimages,"screeplot2.png",sep=""),width = 600, height = 350)
+fviz_screeplot(res.mfa,addlabels = TRUE, title = "Scree plot Brisbane")
+#dev.off()
+
 
 ```
 
@@ -90,7 +91,9 @@ Graphs of Variables
 
 group <- get_mfa_var(res.mfa, "group")
 group
-fviz_mfa_var(res.mfa, "group")
+#png(paste(saveimages,"VariableGroups.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, "group", title ="Variable groups MFA - Brisbane")
+#dev.off()
 # Coordinates of groups
 group$coord
 # Cos2: quality of representation on the factore map
@@ -106,9 +109,13 @@ Contributions per group to dimensions.
 ```{r}
 
 # Contribution to the first dimension
-fviz_contrib(res.mfa, "group", axes = 1)
+#png(paste(saveimages,"ContribGroupsDim1.png",sep=""),width = 600, height = 350)
+fviz_contrib(res.mfa, "group", axes = 1, title = "Contribution of groups to Dim1 - Brisbane")
+#dev.off()
 # Contribution to the second dimension
-fviz_contrib(res.mfa, "group", axes = 2)
+#png(paste(saveimages,"ContribGroupsDim2.png",sep=""),width = 600, height = 350)
+fviz_contrib(res.mfa, "group", axes = 2, title = "Contribution of groups to Dim2 - Brisbane")
+#dev.off()
 # Contributions to the  dimensions
 group$contrib
 
@@ -135,9 +142,10 @@ quanti.var$contrib
 Correlations between variables and dimensions
 
 ```{r}
-
+#png(paste(saveimages,"QuantitativeVariables.png",sep=""),width = 600, height = 350)
 fviz_mfa_var(res.mfa, "quanti.var", palette = "jco", 
-             col.var.sup = "violet", repel = TRUE)
+             col.var.sup = "violet", repel = TRUE, title = "Quantitative Variables MFA - Brisbane")
+#dev.off()
 ```
 
 The correlation circle suggests that dimension 1 is mostly correlated with Wind speed and Temperature variables, while dimension 2 is more correlated with cloudiness, rainfall and humidity. This plot also shows that there is some opposite correlation between pressure variables and certain temperature variables, as well as between humidity and sunshine. The rainfall variable is not particularly correlated with any variable. Lastly, all variables are reasonably well represented on the factor map, as indicated by the distance from the origin.  
@@ -146,19 +154,20 @@ The correlation circle suggests that dimension 1 is mostly correlated with Wind 
 Contributions to dimension 1
 
 ```{r}
-
+#png(paste(saveimages,"ContribQuantDim1.png",sep=""),width = 600, height = 350)
 fviz_contrib(res.mfa, choice = "quanti.var", axes = 1, top = 20,
-             palette = "jco")
+             palette = "jco", title = "Contribution of quantitative variables to Dim1 - Brisbane")
+#dev.off()
 
 ```
 
 Contributions to dimension 2
 
 ```{r}
-
+#png(paste(saveimages,"ContribQuantDim2.png",sep=""),width = 600, height = 350)
 fviz_contrib(res.mfa, choice = "quanti.var", axes = 2, top = 20,
-             palette = "jco")
-
+             palette = "jco", title = "Contribution of quantitative variables to Dim2 - Brisbane")
+#dev.off()
 ```
 
 The contribution of quantitative variables histograms evidence that, within the ExternalFactors group, the variables related to humidity contribute the most to dimension 1, along with cloudiness and sunshine. Evaporation does not contribute much within the sunlight group. On the other hand, concerning dimension 2, the most important external factor is pressure, whereas contributions by the others is almost negligible. All temperature values are similarly important for dimension 2. 
@@ -167,11 +176,12 @@ The contribution of quantitative variables histograms evidence that, within the 
 Overall contribution
 
 ```{r}
-
+#png(paste(saveimages,"ContribQuant.png",sep=""),width = 600, height = 350)
 fviz_mfa_var(res.mfa, "quanti.var", col.var = "contrib", 
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
              col.var.sup = "violet", repel = TRUE,
-             geom = c("point", "text"))
+             geom = c("point", "text"), title = "Contribution Quantitative Variables MFA - Brisbane")
+#dev.off()
 
 ```
 
@@ -182,14 +192,33 @@ This plot shows that the overall most contributing variables are those related t
 Quality of representation(cos2)
 
 ```{r}
-
+#png(paste(saveimages,"Cos2QuantVariables.png",sep=""),width = 600, height = 350)
 fviz_mfa_var(res.mfa, col.var = "cos2",
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
-             col.var.sup = "violet", repel = TRUE)
+             col.var.sup = "violet", repel = TRUE, title = "Cos2 Quantitative Variables MFA - Brisbane")
+#dev.off()
 
 ```
 
 The cos2 plot suggests that most variables are reasonably well represented by the first two dimensions. Wind-related variables, evaporation and rainfall have the lowest overall cos2 values, so more than two dimensions may be needed to capture these variables.
+
+
+
+Qualitative variables ## RUN THE MFA WITH ALL VARIABLES BEFORE 
+
+```{r}
+quali.var <- get_mfa_var(res.mfa, "quali.var")
+quali.var
+
+#png(paste(saveimages,"QualiVarCat.png",sep=""),width = 600, height = 350)
+fviz_mfa_var(res.mfa, "quali.var", col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             col.var.sup = "violet", repel = TRUE,
+             geom = c("point", "text"), title = "Qualitative variables categories MFA - Brisbane")
+#dev.off()
+```
+
+The qualitative variables plots shows the correlation between the categorical variables. In this case, it becomes clear that winds in the east direction are correlated with rainy days, whereas western winds are closer to non-rainy days. It is also worth pointing out that northern winds tend to best associated with higher values of dimension 2, while southern winds are found at lower values of dimension 2. Being dimension 2 correlated with temperature, it can be inferred that winds travelling in the south direction are colder than northern winds. 
 
 
 
@@ -198,14 +227,18 @@ Analysis of individuals
 ```{r}
 ind <- get_mfa_ind(res.mfa)
 ind
+#png(paste(saveimages,"IndsRainTomorrowBool.png",sep=""),width = 600, height = 350)
 fviz_mfa_ind(res.mfa, 
              habillage = "RainTomorrow", # color by groups 
              palette = c("#00AFBB", "#E7B800", "#FC4E07"),
              addEllipses = TRUE, ellipse.type = "confidence", 
-             repel = TRUE, invisible = "quali.var", geom = "point")
+             repel = TRUE, invisible = "quali.var", geom = "point", title = "Individuals MFA - Brisbane")
+#dev.off()
 
 #####
-fviz_ellipses(res.mfa, c("RainTomorrow", "RainToday"), repel = TRUE, geom = "point")
+#png(paste(saveimages,"IndsRainComparison.png",sep=""),width = 600, height = 350)
+fviz_ellipses(res.mfa, c("RainTomorrow", "RainToday"), repel = TRUE, geom = "point", title = "MFA Factor map - Brisbane")
+#dev.off()
 
 
 ```
@@ -218,12 +251,13 @@ From the individuals plots, it is very clear that rainy days are separated from 
 Labeling observations by seasons
 
 ```{r}
-
+#png(paste(saveimages,"IndsSeason.png",sep=""),width = 600, height = 350)
 fviz_mfa_ind(res.mfa, 
              habillage = "Season",
              addEllipses = TRUE, ellipse.type = "confidence", 
              repel = TRUE, 
-             invisible = "quali.var", geom = "point")
+             invisible = "quali.var", geom = "point", title = "Individuals by Season MFA - Brisbane")
+#dev.off()
 ```
 
 It is observed that while Summer and Winter are clearly separated, there is significant overlap between Autumn and Spring, implying that these seasons do not differ much in terms of weather. In this case, Autumn and Winter differ across dimension 2, which is fairly consistent with reality because temperature was a relevant feature for dimension 2. 
