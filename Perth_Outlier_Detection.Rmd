@@ -1,0 +1,107 @@
+---
+title: "Perth_Outlier_Detection"
+author: "Kat Weissman"
+date: "11/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(mvoutlier)
+```
+
+
+```{r}
+#LOAD DATA
+df <- read.csv("Completed_Location_CSVs/df_Perth_completed.csv", stringsAsFactors = T)
+
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+#LIST VARIABLES
+str(df)
+```
+
+## Summary Statistics
+
+```{r}
+#SUMMARIZE DATA BY COLUMN
+summary(df)
+```
+```{r}
+#split data by season for outlier detection
+autumn <- subset(df, Season == "autumn")
+spring <- subset(df, Season == "spring")
+summer <- subset(df, Season == "summer")
+winter <- subset(df, Season == "winter")
+
+#identify numeric variables excluding Rainfall and TempRange
+numvar <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am",
+            "WindSpeed3pm","Humidity3pm", "Pressure3pm","Cloud3pm","Temp3pm",
+            "MinTemp", "MaxTemp", "Evaporation", "Sunshine", "WindGustSpeed")
+
+#identify morning variables
+morning <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am")
+
+#identify afternoon variables
+afternoon <- c("WindSpeed3pm","Humidity3pm", "Pressure3pm","Cloud3pm","Temp3pm")
+  
+#identify all day variables excluding TempRange, Rainfall
+allDay <- c("MinTemp", "MaxTemp", "Evaporation","Sunshine", "WindGustSpeed")
+
+```
+
+An error occurs when TempRange and Rainfall variables are included in the multivariate outlier detection.
+
+```{r}
+#choose features for multivariate outlier detection
+autumnNum <- autumn[ , numvar]
+autumn9am <- autumn[ , morning]
+autumn3pm <- autumn[ , afternoon]
+autumnDay <- autumn[ , allDay]
+
+#compare plots when all variables are included vs. a portion of the variables
+autNumDist <- dd.plot(autumnNum, quan=1/2, alpha=0.025, sub='Autumn numeric excluding Rainfall & TempRange')
+aut9amDist <- dd.plot(autumn9am, quan=1/2, alpha=0.025, sub='Autumn 9am')
+aut3pmDist <- dd.plot(autumn3pm, quan=1/2, alpha=0.025, sub='Autumn 3pm')
+autDayDist <- dd.plot(autumnDay, quan=1/2, alpha=0.025, sub='Autumn All Day')
+```
+```{r}
+#choose features for multivariate outlier detection
+springNum <- spring[ , numvar]
+spring9am <- spring[ , morning]
+spring3pm <- spring[ , afternoon]
+springDay <- spring[ , allDay]
+
+springNumDist <- dd.plot(springNum, quan=1/2, alpha=0.025, sub='Spring numeric excluding Rainfall & TempRange')
+spr9amDist <- dd.plot(spring9am, quan=1/2, alpha=0.025, sub='Spring 9am')
+spr3pmDist <- dd.plot(spring3pm, quan=1/2, alpha=0.025, sub='Spring 3pm')
+sprDayDist <- dd.plot(springDay, quan=1/2, alpha=0.025, sub='Spring All Day')
+```
+```{r}
+#choose features for multivariate outlier detection
+summerNum <- summer[ , numvar]
+summer9am <- summer[ , morning]
+summer3pm <- summer[ , afternoon]
+summerDay <- summer[ , allDay]
+
+sumNumDist <- dd.plot(summerNum, quan=1/2, alpha=0.025, sub='Summer numeric excluding Rainfall & TempRange')
+sum9amDist <- dd.plot(summer9am, quan=1/2, alpha=0.025, sub='Summer 9am')
+sum3pmDist <- dd.plot(summer3pm, quan=1/2, alpha=0.025, sub='Summer 3pm')
+sumDayDist <- dd.plot(summerDay, quan=1/2, alpha=0.025, sub='Autumn All Day')
+```
+
+```{r}
+#choose features for multivariate outlier detection
+winterNum <- winter[ , numvar]
+winter9am <- winter[ , morning]
+winter3pm <- winter[ , afternoon]
+winterDay <- winter[ , allDay]
+
+wintNumDist <- dd.plot(winterNum, quan=1/2, alpha=0.025, sub='Winter numeric excluding Rainfall & TempRange')
+wint9amDist <- dd.plot(winter9am, quan=1/2, alpha=0.025, sub='Winter 9am')
+wintpmDist <- dd.plot(winter3pm, quan=1/2, alpha=0.025, sub='Winter 3pm')
+wintDayDist <- dd.plot(winterDay, quan=1/2, alpha=0.025, sub='Winter All Day')
+```
+
+
+
