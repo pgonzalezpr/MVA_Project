@@ -76,6 +76,9 @@ springNumDist <- dd.plot(springNum, quan=1/2, alpha=0.025, sub='Spring numeric e
 spr9amDist <- dd.plot(spring9am, quan=1/2, alpha=0.025, sub='Spring 9am')
 spr3pmDist <- dd.plot(spring3pm, quan=1/2, alpha=0.025, sub='Spring 3pm')
 sprDayDist <- dd.plot(springDay, quan=1/2, alpha=0.025, sub='Spring All Day')
+
+outliers <- aq.plot(springNum, delta=qchisq(0.975, df = ncol(springNum)),
+                    quan = 1/2, alpha = 0.05)
 ```
 ```{r}
 #choose features for multivariate outlier detection
@@ -103,5 +106,40 @@ wintpmDist <- dd.plot(winter3pm, quan=1/2, alpha=0.025, sub='Winter 3pm')
 wintDayDist <- dd.plot(winterDay, quan=1/2, alpha=0.025, sub='Winter All Day')
 ```
 
+
+The follow plots are interesting, but can only be used for 2 dimensions.
+MaxTemp and Evaporation are correlated so may be interesting to look at.
+
+```{r}
+autTemp <- autumn[,c("MaxTemp","Evaporation")]
+colorData <- color.plot(autTemp, quan=1/2, alpha=0.025, sub='Summer MaxTemp vs Evaporation')
+
+sprTemp <- spring[,c("MaxTemp","Evaporation")]
+colorData <- color.plot(sprTemp, quan=1/2, alpha=0.025, sub='Autumn MaxTemp vs Evaporation')
+
+sumTemp <- summer[,c("MaxTemp","Evaporation")]
+colorData <- color.plot(sumTemp, quan=1/2, alpha=0.025, sub='Autumn MaxTemp vs Evaporation')
+
+winTemp <- winter[,c("MaxTemp","Evaporation")]
+colorData <- color.plot(winTemp, quan=1/2, alpha=0.025, sub='Autumn MaxTemp vs Evaporation')
+```
+
+Humidity9am and Humidity3pm are also correlated so may be interesting to look at.
+A change in humidity could be related to rainfall.
+
+```{r}
+autHum <- autumn[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(autHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+
+sprHum <- spring[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(sprHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+
+sumHum <- summer[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(sumHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+
+winHum <- winter[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(winHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+
+```
 
 
