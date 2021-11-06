@@ -3,7 +3,7 @@ title: "Outliers"
 output: html_document
 ---
 
-# Outliers Brisbane
+# Outliers Perth
 ```{r}
 library(chemometrics)
 library(DMwR2)
