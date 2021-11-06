@@ -13,7 +13,7 @@ library(ggplot2)
 library(GGally)
 library(car)
 
-df <- read.csv("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/MVA_Project-main/Location CSVs/df_Brisbane_MICE.csv")
+df <- read.csv("Location CSVs/df_Brisbane_MICE.csv")
 
 ```
 
