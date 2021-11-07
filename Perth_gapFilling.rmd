@@ -1,0 +1,485 @@
+---
+title: 'Group 1: Multivariate analysis of australian climate data'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo Gonzalez, Mateo Jacome
+  Gonzalez y Pedro Gonzalez Prado
+output:
+  html_document:
+    self_contained: false
+editor_options: 
+  chunk_output_type: console
+---
+
+## Data imputation
+
+
+```{r, ini, message=FALSE, warning=FALSE, results='hide'}
+
+# CLEARING ENVIRONMENT #
+#rm(list=ls(all=TRUE))
+#PREPARE WORK DIRECTORY 
+#current_path <- getActiveDocumentContext()$path 
+#setwd(dirname(current_path ))
+
+#INSTALL & LOAD LIBRARIES
+# Required packages
+pkgs<-c("corrplot","DT", "dplyr","FactoMineR","factoextra", "ggplot2","lmtest", "grid", "gridExtra", "lubridate", "mice", "sm","summarytools", "VIM", "visdat")
+
+# Non-installed packages
+inspkgs<-pkgs[!pkgs %in% installed.packages()]
+for(libs in inspkgs) install.packages(libs, repos = "http://cran.us.r-project.org")
+
+# Loading required
+sapply(pkgs,require,character=TRUE)
+
+df <- read.csv("Location CSVs/df_Perth.csv",sep=",",stringsAsFactors = T)
+df <- subset(df, Location == "Perth")
+df$Date <- as.Date(df$Date)
+```
+###  PERTH
+
+## DETECT MISSING DATA
+
+```{r,  message=FALSE, warning=FALSE, results='hide'}
+#Missing Data from WIND already imputed in other .RMd file.
+
+#Detecting missing data by row
+mis_ind = rowSums(is.na(df))
+m1<-which(mis_ind>0)
+df_NAs <- df[m1,]
+table(mis_ind)
+
+# Detecting Missing Values by Column as count
+mis_col <- colSums(is.na(df))
+mis_col
+
+
+# Missing Data Graphs
+vis_miss(df)
+
+aggr(df, col=c('grey','#252525'), numbers=TRUE, sortVars=TRUE, labels=names(df), 
+     cex.axis=.5, gap=1, ylab=c("Missing data"," "),border=NA)
+```
+
+Very few numerical data are missing, Evaporation is not strongly correlated with any other numeric variable. Cloud3pm is negatively correlated with Sunshine and positively correlated with Cloud9am and Humidity3pm. Sunshine is negatively correlated with the Humidity and Cloud measurements.
+
+
+```{r,  message=FALSE, warning=FALSE, results='hide'}
+#CHECK NAs FOR EVAPORATION
+#create variable to identify rows that are missing Evaporation
+na_Evaporation <- which(is.na(df_NAs$Evaporation))
+#create dataframe to check summary statistics of observations missing Evaporation
+df_NA_Evap<- df_NAs[na_Evaporation,]
+summary(df_NA_Evap)
+
+#Plotting histograms side by side for rainfall in full data set vs on days when
+#Evaporation is NA
+c1 <- rgb(173,216,230, max=255, alpha=80, names = "lt.blue") #create transparent color
+c2 <- rgb(255,192,203, max=255, alpha=80, names = "lt.pink") # create transparent color
+
+rain_full <- df$Rainfall
+rain_evap <- df_NA_Evap$Rainfall
+b <- min(c(rain_full,rain_evap), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(rain_full,rain_evap), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=20) # Make a neat vector for the breakpoints
+hgRainfall <- hist(rain_full, breaks = ax, plot = FALSE) # Save first histogram data
+hgRainfall_Evap <- hist(rain_evap, breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgRainfall, col=c1, freq=FALSE, main="Side by Side Histograms for Rainfall",
+     xlab="Rainfall per Day (mm)",) # Plot 1st histogram using a transparent color
+plot(hgRainfall_Evap, col=c2, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topright", c("All Days", "Days with Evaporation NA"), fill=c(c1,c2))
+
+#Plotting histograms side by side for Humidity3pm in full data set vs on days when
+#Evaporation is NA
+
+humid3_full <- df$Humidity3pm
+humid3_evap <- df_NA_Evap$Humidity3pm
+b <- min(c(humid3_full,humid3_evap), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(humid3_full,humid3_evap), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=20) # Make a neat vector for the breakpoints
+hgHumid3 <- hist(humid3_full, breaks = ax, plot = FALSE) # Save first histogram data
+hgHumid3_Evap <- hist(humid3_evap, breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgHumid3_Evap, col=c2, freq=FALSE, main="Side by Side Histograms for Humidity at 3pm",
+     xlab="Relative Humidity Percentage at 3pm") # Plot 1st histogram using a transparent color
+plot(hgHumid3, col=c1, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topleft", c("All Days", "Days with Evaporation NA"), fill=c(c1,c2))
+
+#Plotting histograms side by side for Humidity9am in full data set vs on days when
+#Evaporation is NA
+
+humid9_full <- df$Humidity9am
+humid9_evap <- df_NA_Evap$Humidity9am
+b <- min(c(humid9_full,humid9_evap), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(humid9_full,humid9_evap), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=20) # Make a neat vector for the breakpoints
+hgHumid9 <- hist(humid9_full, breaks = ax, plot = FALSE) # Save first histogram data
+hgHumid9_Evap <- hist(humid9_evap, breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgHumid9_Evap, col=c2, freq=FALSE, main="Side by Side Histograms for Humidity at 9am",
+     xlab="Relative Humidity Percentage at 9am",) # Plot 1st histogram using a transparent color
+plot(hgHumid9, col=c1, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topleft", c("All Days", "Days with Evaporation NA"), fill=c(c1,c2))
+
+
+###The missing values for Evaporation are clearly not random. They tend to occur on days
+###with higher than average rainfall and humidity. In theory, the higher the relative humidity,
+###the lower the evaporation should be.
+```
+
+
+```{r,  message=FALSE, warning=FALSE, results='hide'}
+#CHECK NAs FOR SUNSHINE
+#create variable to identify rows that are missing Sunshine
+na_Sunshine <- which(is.na(df_NAs$Sunshine))
+#check rows of observations missing Sunshine
+df_NAs[na_Sunshine,]
+
+###The missing values for Sunshine do not appear random. All days are in Summer, 
+###and on days with rainfall, high cloud cover, or both.
+
+#CHECK NAs FOR WIND GUST SPEED
+#create variable to identify rows that are missing WindGustSpeed
+na_GustSpeed <- which(is.na(df_NAs$WindGustSpeed))
+#check rows of observations missing WindGustSpeed
+df_NAs[na_GustSpeed,]
+
+#Plotting histograms side by side for WindSpeed3pm in full data set vs on days when
+#WindGustSpeed is NA
+
+Speed3pm_full <- df$WindSpeed3pm
+Speed3pm_wgNA <- df_NAs[na_GustSpeed,]$WindSpeed3pm
+b <- min(c(Speed3pm_full,Speed3pm_wgNA), na.rm=TRUE) # Set the minimum for the breakpoints
+e <- max(c(Speed3pm_full,Speed3pm_wgNA), na.rm=TRUE) # Set the maximum for the breakpoints
+ax <- pretty(b:e, n=20) # Make a neat vector for the breakpoints
+hgSpeed3pm <- hist(Speed3pm_full, breaks = ax, plot = FALSE) # Save first histogram data
+hgSpeed3pm_wgNA <- hist(Speed3pm_wgNA, breaks = ax, plot = FALSE) # Save 2nd histogram data
+plot(hgSpeed3pm_wgNA, col=c2, freq=FALSE, main="Side by Side Histograms for Wind Speed at 3pm",
+     xlab="Wind Speed at 3pm",) # Plot 1st histogram using a transparent color
+plot(hgSpeed3pm, col=c1, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
+legend("topleft", c("All Days", "Days with WindGustSpeed NA"), fill=c(c1,c2))
+```
+
+
+WindGustSpeed is potentially missing randomly, however WindGustDir is only missing when WindGustSpeed is missing.
+
+
+```{r,  message=FALSE, warning=FALSE, results='hide'}
+#CHECK NAs FOR CLOUD
+#create variable to identify rows that are missing Cloud9am
+na_Cloud9 <- which(is.na(df_NAs$Cloud9am))
+#check rows of observations missing Cloud9am
+df_NAs[na_Cloud9,]
+
+#create variable to identify rows that are missing Cloud3pm
+na_Cloud3 <- which(is.na(df_NAs$Cloud3pm))
+#check rows of observations missing Cloud3pm
+df_NAs[na_Cloud3,]
+
+###Cloud data is potentially missing randomly. The days that have data missing at 9am
+###have data available at 3pm and vice versa.
+
+#IMPUTE MISSING VALUES
+
+###'calm' added to wind levels in other .csv
+
+##create variable to identify rows that are missing wind direction at 9am
+#na_WindDir9am <- which(is.na(df$WindDir9am))
+##check summary of wind speed at 9am for rows that are missing wind direction at 9am
+#summary(df[na_WindDir9am,]$WindSpeed9am)
+#### All values of WindDir9am can be imputed to 'Calm'
+##imputation using row identifier
+#df$WindDir9am[na_WindDir9am] <- 'Calm'
+
+##create variable to identify rows that are missing wind direction at 3pm
+#na_WindDir3pm <- which(is.na(df$WindDir3pm))
+##check summary of wind speed at 3pm for rows that are missing wind direction at 3pm
+#summary(df[na_WindDir3pm,]$WindSpeed3pm)
+#### All values of WindDir3pm can be imputed to 'Calm'
+##imputation using row identifier
+#df$WindDir3pm[na_WindDir3pm] <- 'Calm'
+
+# IMPUTATION BY MICE
+
+md.pattern(df)
+
+tempData <- mice(df[,c("Month","MinTemp","MaxTemp","Rainfall","Evaporation",
+                       "Sunshine","WindGustDir","WindGustSpeed","WindDir9am",
+                       "WindDir3pm","WindSpeed9am","WindSpeed3pm","Humidity9am",
+                       "Humidity3pm","Pressure9am","Pressure3pm","Cloud9am",
+                       "Cloud3pm","Temp9am","Temp3pm")],m=3,set.seed(2))
+tempData$meth
+summary(tempData)
+completedData <- complete(tempData,1)
+densityplot(tempData)
+
+summary(completedData)
+
+
+#Compare density plots of original data with completed data
+plot(density(df$Evaporation, na.rm=TRUE), col='red')
+lines(density(completedData$Evaporation), col='blue')
+
+plot(density(df$WindGustSpeed, na.rm=TRUE), col='red')
+lines(density(completedData$WindGustSpeed), col='blue')
+
+plot(density(df$Sunshine, na.rm=TRUE), col='red')
+lines(density(completedData$Sunshine), col='blue')
+
+plot(density(df$Cloud9am, na.rm=TRUE), col='red')
+lines(density(completedData$Cloud9am), col='blue')
+
+plot(density(df$Cloud3pm, na.rm=TRUE), col='red')
+lines(density(completedData$Cloud3pm), col='blue')
+
+plot(density(df$Rainfall, na.rm=TRUE), col='red')
+lines(density(completedData$Rainfall), col='blue')
+
+###Density plots of imputed variables match density plots of original variables
+###with NA's removed.
+
+
+#Replace original data with completed data from MICE
+df[,c("Month","MinTemp","MaxTemp","Rainfall","Evaporation",
+      "Sunshine","WindGustDir","WindGustSpeed","WindDir9am",
+      "WindDir3pm","WindSpeed9am","WindSpeed3pm","Humidity9am",
+      "Humidity3pm","Pressure9am","Pressure3pm","Cloud9am",
+      "Cloud3pm","Temp9am","Temp3pm")] <- completedData
+
+#IMPUTE RAINTODAY & RAINTOMORROW
+
+#Fill RainToday & RainTomorrow NAs with appropriate values based on Rainfall.
+#identify rows which are missing RainToday & Rainfall > 1 and impute "Yes"
+na_RainYes <- which(is.na(df$RainToday) & (df$Rainfall >= 1))
+df[na_RainYes,]$RainToday <- "Yes"
+#identify dates from imputed values
+dates_RainYes <- df[na_RainYes,]$Date
+#identify dates before imputed values
+dates_RainTomYes <- df[na_RainYes,]$Date - 1 
+#identify rows for day before imputed Rain and impute "Yes"
+na_RainTomYes <- which(df$Date == dates_RainTomYes)
+df[na_RainTomYes,]$RainTomorrow <- "Yes"
+
+summary(df)
+
+#All NAs are filled, write new .csv to use for imputing time series.
+#write.csv(df,'df_Perth_MICE.csv', row.names = FALSE)
+
+#https://www.earthdatascience.org/courses/earth-analytics/time-series-data/summarize-time-series-by-month-in-r/
+# plot rainfall as time series
+df %>%
+  ggplot(aes(x = Date, y = Rainfall)) +
+  geom_point(color = "darkorchid4") +
+  labs(title = "Rainfall",
+       y = "Daily rainfall (mm)",
+       x = "Date") + theme_bw(base_size = 15)
+```
+
+Despite having filled all the NA values, the dataset seems to be lacking records and rows for three whole months. 
+It appears we are missing April 2011, December 2012, and February 2013. 
+
+```{r}
+#Detecting Missing Dates from date range
+date_range <- seq(min(df$Date), max(df$Date), by = 1) 
+missing_Dates <- data.frame(Date = date_range[!date_range %in% df$Date]) 
+
+```
+
+While this information is missing in the Kaggle dataset, it is partially available from the original source: http://www.bom.gov.au/climate/data-services/station-data.shtml.
+While the missing months are present, we can only access data concerning MaxTemp, MinTemp, and Rainfall. This data, although scarce, can be used to impute many of the variables with a certain confidence. 
+
+```{r}
+df$TempRange <- df$MaxTemp - df$MinTemp
+cor_matrix = cor(df[,c(7:11,13,16:25,28)]) #starting from column 4: MinTemp
+corrplot(cor_matrix, method = 'number') # colorful number
+```
+
+Thanks to MaxTemp, MinTemp, and TempRange, we can find high correlations with a date's Sunshine, and 9AM and 3 PM measures for Humidity, Pressure, Cloud cover, and Temperature. This means that we can potentially impute those variables for the missing months with a certain fidelity, and from this partially imputed set, find the closest neighbours for imputing wind data and evaporation. First, the data must be gathered and adapted to our schema.
+
+```{r}
+#Getting MaxTemp
+missing_MaxTemp <- read.csv("CSVs_for_gap_imputation/Perth_MaxTemp.csv",sep=",",stringsAsFactors = T)
+missing_MaxTemp$Date <- as.Date(paste(missing_MaxTemp$Year, missing_MaxTemp$Month, missing_MaxTemp$Day, sep="-"))
+missing_MaxTemp <- subset(missing_MaxTemp, Date %in% missing_Dates$Date, c(Date, Maximum.temperature..Degree.C.))  
+names(missing_MaxTemp) <- c("Date","MaxTemp")
+summary(missing_MaxTemp)
+
+        #subset(missing_MaxTemp, Date %in%  df[is.na(df$MaxTemp),]$Date) ##NAs for Maxtemp are shared between the Australian Gov's data and Kaggle's
+
+#Getting MinTemp
+missing_MinTemp <- read.csv("CSVs_for_gap_imputation/Perth_MinTemp.csv",sep=",",stringsAsFactors = T)
+missing_MinTemp$Date <- as.Date(paste(missing_MinTemp$Year, missing_MinTemp$Month, missing_MinTemp$Day, sep="-"))
+missing_MinTemp <- subset(missing_MinTemp, Date %in% missing_Dates$Date, c(Date, Minimum.temperature..Degree.C.))  
+names(missing_MinTemp) <- c("Date","MinTemp")
+summary(missing_MinTemp)
+
+#Getting rainfall
+missing_Rainfall <- read.csv("CSVs_for_gap_imputation/Perth_Rainfall.csv",sep=",",stringsAsFactors = T)
+missing_Rainfall$Date <- as.Date(paste(missing_Rainfall$Year, missing_Rainfall$Month, missing_Rainfall$Day, sep="-"))
+missing_Rainfall <- subset(missing_Rainfall, Date %in% missing_Dates$Date, c(Date, Rainfall.amount..millimetres.))  
+names(missing_Rainfall) <- c("Date","Rainfall")
+summary(missing_Rainfall)
+
+#merge
+df1 <- merge(x = df, y = missing_Dates, by = "Date", all = T)        #Merge all dates to original df
+df2 <- merge(x = missing_MaxTemp, y = missing_MinTemp, by = "Date")  #Merge missing maxtemp with mintemp
+df3 <- merge(x = df2, y = missing_Rainfall, by = "Date")             #Merge missing max/minTemp with Rainfall
+df4 <- merge(x = df1, y = df3, by = "Date", all.x = T)               #Merge missing variables with original df
+
+#The resulting dataframe after the merges has repeated and split columns. To get rid of them:
+df4 <- df4 %>% mutate(MaxTemp = coalesce(MaxTemp.x, MaxTemp.y)) %>%  
+  mutate(MinTemp = coalesce(MinTemp.x, MinTemp.y)) %>%
+  mutate(Rainfall = coalesce(Rainfall.x, Rainfall.y)) %>%
+  select(-c(Rainfall.x, Rainfall.y, MinTemp.x, MinTemp.y, MaxTemp.x, MaxTemp.y))
+summary(df4)
+
+#Reconstruct Location, Year, Month, Day, TempRange
+df4[, "Year"] <- as.factor(format(df4[,"Date"], "%Y"))
+df4[, "Month"] <- as.factor(format(df4[,"Date"], "%B"))
+df4[, "Day"] <- as.integer(format(df4[,"Date"], "%d"))
+
+df4[,"Location"] <- "Perth"
+
+df4$TempRange <- df4$MaxTemp - df4$MinTemp
+
+summary(df4)
+
+#Reconstruct RainToday and RainTomorrow
+na_RainYes4 <- which(is.na(df4$RainToday) & (df4$Rainfall >= 1))
+na_RainNo4 <- which(is.na(df4$RainToday) & (df4$Rainfall < 1))
+df4[na_RainYes4,]$RainToday <- "Yes"
+df4[na_RainNo4,]$RainToday <- "No"
+
+na_RainTom4 <- which(is.na(df4$RainTomorrow))
+dates_na_RainTom4 <- df4[na_RainTom4,]$Date
+dates_na_RainTom4_tomorrow <- dates_na_RainTom4 +1
+df4[na_RainTom4,]$RainTomorrow <- df4[df4$Date %in% as.Date(dates_na_RainTom4_tomorrow),]$RainToday
+
+df4$monthID <- paste(df4$Year, df4$Month, sep = "-")
+
+summary(df4)
+
+```
+
+Once we've filled and recomputed all the available and logically-imputable variables, we can proceed with MICE again.
+
+```{r}
+df4_backup <- df4
+df4 <- subset(df4, Month %in% c("diciembre","enero","febrero","marzo","abril"))
+summary(df4)
+
+md.pattern(df4)
+tempData4 <- mice(df4[,c("Month","MinTemp","MaxTemp","TempRange","Rainfall","Evaporation",
+                       "Sunshine","WindGustDir","WindGustSpeed","WindDir9am",
+                       "WindDir3pm","WindSpeed9am","WindSpeed3pm","Humidity9am",
+                       "Humidity3pm","Pressure9am","Pressure3pm","Cloud9am",
+                       "Cloud3pm","Temp9am","Temp3pm")],m=3,set.seed(2))
+tempData4$meth
+summary(tempData4)
+
+completedData4 <- complete(tempData4,1)
+
+densityplot(tempData4)
+
+summary(completedData4)
+
+
+#Replace complete time series data with completed data from MICE
+df4[,c("Month","MinTemp","MaxTemp","TempRange","Rainfall","Evaporation",
+      "Sunshine","WindGustDir","WindGustSpeed","WindDir9am",
+      "WindDir3pm","WindSpeed9am","WindSpeed3pm","Humidity9am",
+      "Humidity3pm","Pressure9am","Pressure3pm","Cloud9am",
+      "Cloud3pm","Temp9am","Temp3pm")] <- completedData4
+
+summary(df4)
+
+df4$WindGustDir<- factor(df4$WindGustDir, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", 
+                                                     "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "unkn"))
+df4$WindDir9am<- factor(df4$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", 
+                                                   "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm", "unkn"))
+df4$WindDir3pm<- factor(df4$WindDir3pm, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", 
+                                                   "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm", "unkn"))
+
+df4[df4$Date %in% missing_Dates$Date,] <- df4 %>% subset(Date %in% missing_Dates$Date) %>% 
+  mutate(WindDir3pm = "unkn", WindDir9am = "unkn", WindGustDir = "unkn")
+summary(df4)
+df5 <- subset(df4_backup, Month %in% c("mayo","junio","julio","agosto","septiembre","octubre","noviembre"))
+df5$monthID <- paste(df5$Year, df5$Month, sep = "-")
+
+
+df6 <- rbind(df4, df5) %>% arrange(Date)
+df6$Season <- ifelse(df6$Month %in% c("diciembre","enero","febrero"), "summer",
+              ifelse(df6$Month %in% c("marzo","abril","mayo"), "autumn",
+              ifelse(df6$Month %in% c("junio","julio","agosto"), "winter",
+              ifelse(df6$Month %in% c("septiembre","octubre","noviembre"), "spring","0"))) 
+                     ) 
+df6$Season <- as.factor(df6$Season)
+summary(df6)
+```   
+
+Plot time series to visualize imputed data
+
+```{r}
+#Sunshine
+sunshine <- ggplot() + geom_point(data = df, aes(x = Date, y = Sunshine), color = "orange")
+sunshine <- sunshine + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = Sunshine), color = "brown2") + labs(title = "Sunshine",
+       y = "Sunshine (h)",
+       x = "Date") + theme_bw(base_size = 15)
+sunshine
+
+#Evaporation
+evaporation <- ggplot() + geom_point(data = df, aes(x = Date, y = Evaporation), color = "orange")
+evaporation <- evaporation + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = Evaporation), color = "brown2") + labs(title = "Evaporation",
+       y = "Evaporation (mm)",
+       x = "Date") + theme_bw(base_size = 15)
+evaporation
+
+#Pressure
+pressure9 <- ggplot() + geom_point(data = df, aes(x = Date, y = Pressure9am), color = "orange")
+pressure9 <- pressure9 + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = Pressure9am), color = "brown2") + labs(title = "Pressure 9 AM",
+       y = "Pressure (hPa)",
+       x = "Date") + theme_bw(base_size = 15)
+pressure9
+
+#Pressure
+pressure3 <- ggplot() + geom_point(data = df, aes(x = Date, y = Pressure3pm), color = "orange")
+pressure3 <- pressure3 + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = Pressure3pm), color = "brown2") + labs(title = "Pressure 3 AM",
+       y = "Pressure (hPa)",
+       x = "Date") + theme_bw(base_size = 15)
+pressure3
+
+#Humidity
+humidity9 <- ggplot() + geom_point(data = df, aes(x = Date, y = Humidity9am), color = "orange")
+humidity9 <- humidity9 + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = Humidity9am), color = "darkorange3") + labs(title = "Humidity 9 AM",
+       y = "Humidity (%)",
+       x = "Date") + theme_bw(base_size = 15)
+humidity9
+
+#Temperature
+temp9 <- ggplot() + geom_point(data = df, aes(x = Date, y = Temp9am), color = "orange")
+temp9 <- temp9 + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = Temp9am), color = "darkorange3") + labs(title = "Temperature 9 AM",
+       y = "Temperature (ºC)",
+       x = "Date") + theme_bw(base_size = 15)
+temp9
+
+#WindSpeed
+wind9 <- ggplot() + geom_point(data = df, aes(x = Date, y = WindSpeed9am), color = "orange")
+wind9 <- wind9 + geom_point(data = subset(df6, Date %in% missing_Dates$Date), 
+                                  aes(x = Date, y = WindSpeed9am), color = "brown2") + labs(title = "Wind Speed 9 AM",
+       y = "Wind Speed (km/h)",
+       x = "Date") + theme_bw(base_size = 15)
+wind9
+
+
+```
+
+It seems that performing MICE for the missing months parting from the available variables + TempRange has resulted in an acceptable imputation, as the values tend to follow the time series' trends. Thus, we'll output the completed dataset to a .csv file and use it to perform our analysis.
+
+```{r}
+write.csv(df6,'Completed_Location_CSVs/df_Perth_completed.csv', row.names = FALSE)
+```
+
+
