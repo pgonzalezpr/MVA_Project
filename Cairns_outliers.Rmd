@@ -2,6 +2,7 @@
 title: "Outliers"
 output: html_document
 ---
+----ANDREA's analysis begins-----
 
 # Outliers Cairns
 ```{r}
@@ -126,5 +127,163 @@ print(df[outliers,])
 We select the top 3 outliers that corresponds with observations 794, 43 and 796
 We should remove these outliers and then treat them as missing data. 
 
+^^^^ANDREA's analysis above ^^^^^
 
+---- KAT's analysis begins below ----
+
+I start using the complete time series data without any NA's.
+
+```{r}
+library(mvoutlier)
+
+#LOAD DATA
+df <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv", stringsAsFactors = T)
+
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+str(df)
+
+```
+
+To account for weather differences in seasons, I divide the dataset by season for
+outlier detection. Also, different groups of variables may be correlated based on
+the time of collection, so I create groups of variables for analysis.
+
+Rainfall and TempRange features raise errors when working with the mvoutlier library,
+so they are excluded.
+
+```{r}
+#split data by season for outlier detection
+wet <- subset(df, Season == "wet")
+dry <- subset(df, Season == "dry")
+
+
+#identify numeric variables excluding Rainfall and TempRange
+numvar <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am",
+            "WindSpeed3pm","Humidity3pm", "Pressure3pm","Cloud3pm","Temp3pm",
+            "MinTemp", "MaxTemp", "Evaporation", "Sunshine", "WindGustSpeed")
+
+#identify morning variables
+morning <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am")
+
+#identify afternoon variables
+afternoon <- c("WindSpeed3pm","Humidity3pm", "Pressure3pm","Cloud3pm","Temp3pm")
+  
+#identify all day variables excluding TempRange, Rainfall
+allDay <- c("MinTemp", "MaxTemp", "Evaporation","Sunshine", "WindGustSpeed")
+
+```
+
+
+Since detecting outliers has shown to be useful for identifying days with rainfall,
+an interesting metric will be to compare the number of rainy days included in
+outliers compared with the number of rainy days in the complete data set.
+
+```{r}
+#FULL DATA
+#number of days with rain today
+length(which(df$RainToday == 'Yes'))
+#number of days with rain tomorrow (should match rain today)
+length(which(df$RainTomorrow == 'Yes'))
+#percentage of days with rain today in data set
+length(which(df$RainToday == 'Yes'))/nrow(df)*100
+#percentage of days with rain tomorrow in data set (should match rain today)
+length(which(df$RainTomorrow == 'Yes'))/nrow(df)*100
+
+#WET SEASON
+#number of days with rain today
+length(which(wet$RainToday == 'Yes'))
+#number of days with rain tomorrow 
+length(which(wet$RainTomorrow == 'Yes'))
+#percentage of days with rain today in data set
+length(which(wet$RainToday == 'Yes'))/nrow(wet)*100
+#percentage of days with rain tomorrow in data set 
+length(which(wet$RainTomorrow == 'Yes'))/nrow(wet)*100
+
+#DRY SEASON
+#number of days with rain today
+length(which(dry$RainToday == 'Yes'))
+#number of days with rain tomorrow 
+length(which(dry$RainTomorrow == 'Yes'))
+#percentage of days with rain today in data set
+length(which(dry$RainToday == 'Yes'))/nrow(dry)*100
+#percentage of days with rain tomorrow in data set 
+length(which(dry$RainTomorrow == 'Yes'))/nrow(dry)*100
+```
+
+33% of days are rainy in Cairns overall.
+47% of days in the wet season are rainy.
+16% of days in the dry season are rainy.
+
+
+
+The color.plot function is interesting, but can only be used for 2 dimensions.
+
+Humidity9am and Humidity3pm are correlated and may be interesting to look at.
+A change in humidity could be related to rainfall.
+
+```{r}
+wetHum <- wet[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(wetHum, quan=1/2, alpha=0.025, sub='Wet Season Humidity9am vs Humidity3pm')
+dfWetHumOutliers <- wet[which(colorData$outliers),]
+
+dryHum <- dry[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(dryHum, quan=1/2, alpha=0.025, sub='Dry Season Humidity9am vs Humidity3pm')
+dfDryHumOutliers <- dry[which(colorData$outliers),]
+
+HumidityOutliers <- rbind(dfDryHumOutliers, dfWetHumOutliers)
+
+```
+
+```{r}
+#number of rainy days in the Humidity outliers data
+length(which(HumidityOutliers$RainToday == 'Yes'))
+#percentage of days with rainfall in the Humidity outliers data
+length(which(HumidityOutliers$RainToday == 'Yes'))/nrow(HumidityOutliers)*100
+
+#number of day with rain tomorrow in the Humidity outliers data
+length(which(HumidityOutliers$RainTomorrow == 'Yes'))
+#percentage of days with rain tomorrow in the Humidity outliers data
+length(which(HumidityOutliers$RainTomorrow == 'Yes'))/nrow(HumidityOutliers)*100
+```
+
+Overall, in the set of data recognized as Humidity Outliers, 51% of them have Rain Today
+and 57% of them have Rain Tomorrow. That is quite a bit higher than the 33% of rainy days
+in the overall Cairns data set.
+
+Next, we can evaluate if there is a difference in Humidity Outliers in the dry
+and wet seasons.
+
+```{r}
+#number of rainy days in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainToday == 'Yes'))
+#percentage of days with rainfall in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainToday == 'Yes'))/nrow(dfDryHumOutliers)*100
+
+#number of day with rain tomorrow in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainTomorrow == 'Yes'))
+#percentage of days with rain tomorrow in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainTomorrow == 'Yes'))/nrow(dfDryHumOutliers)*100
+```
+
+In the humidity outliers for the dry season, 55% of them have Rain Tomorrow,
+which is substantially higher compared with 16% of overall days in the dry season 
+which have Rain Tomorrow.
+
+
+```{r}
+#number of rainy days in the Humidity outliers data
+length(which(dfWetHumOutliers$RainToday == 'Yes'))
+#percentage of days with rainfall in the Humidity outliers data
+length(which(dfWetHumOutliers$RainToday == 'Yes'))/nrow(dfWetHumOutliers)*100
+
+#number of day with rain tomorrow in the Humidity outliers data
+length(which(dfWetHumOutliers$RainTomorrow == 'Yes'))
+#percentage of days with rain tomorrow in the Humidity outliers data
+length(which(dfWetHumOutliers$RainTomorrow == 'Yes'))/nrow(dfWetHumOutliers)*100
+```
+
+The wet season has fewer outliers for humidity overall, but 61% of the outliers are rainy, 
+which is higher than the 47% of total days in the wet season that are rainy.
 

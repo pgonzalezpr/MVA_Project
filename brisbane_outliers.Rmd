@@ -3,6 +3,8 @@ title: "Outliers"
 output: html_document
 ---
 
+----ANDREA's analysis begins-----
+
 # Outliers Brisbane
 ```{r}
 library(chemometrics)
@@ -120,5 +122,110 @@ print(df[outliers,])
 We select the top 3 outliers that corresponds with observations 470, 1274 and 1612.
 We should remove these outliers and then treat them as missing data.
 
+^^^^ANDREA's analysis above ^^^^^
 
+---- KAT's analysis begins below ----
+
+I start using the complete time series data without any NA's.
+
+```{r}
+library(mvoutlier)
+
+#LOAD DATA
+df <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv", stringsAsFactors = T)
+
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+str(df)
+
+```
+
+To account for weather differences in seasons, I divide the dataset by season for
+outlier detection. Also, different groups of variables may be correlated based on
+the time of collection, so I create groups of variables for analysis.
+
+Rainfall and TempRange features raise errors when working with the mvoutlier library,
+so they are excluded.
+
+```{r}
+#split data by season for outlier detection
+autumn <- subset(df, Season == "autumn")
+spring <- subset(df, Season == "spring")
+summer <- subset(df, Season == "summer")
+winter <- subset(df, Season == "winter")
+
+#identify numeric variables excluding Rainfall and TempRange
+numvar <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am",
+            "WindSpeed3pm","Humidity3pm", "Pressure3pm","Cloud3pm","Temp3pm",
+            "MinTemp", "MaxTemp", "Evaporation", "Sunshine", "WindGustSpeed")
+
+#identify morning variables
+morning <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am")
+
+#identify afternoon variables
+afternoon <- c("WindSpeed3pm","Humidity3pm", "Pressure3pm","Cloud3pm","Temp3pm")
+  
+#identify all day variables excluding TempRange, Rainfall
+allDay <- c("MinTemp", "MaxTemp", "Evaporation","Sunshine", "WindGustSpeed")
+
+```
+
+Since detecting outliers has shown to be useful for identifying days with rainfall,
+an interesting metric will be to compare the number of rainy days included in
+outliers compared with the number of rainy days in the complete data set.
+
+```{r}
+#FULL DATA
+#number of days with rain today
+length(which(df$RainToday == 'Yes'))
+#number of days with rain tomorrow (should match rain today)
+length(which(df$RainTomorrow == 'Yes'))
+#percentage of days with rain today in data set
+length(which(df$RainToday == 'Yes'))/nrow(df)*100
+#percentage of days with rain tomorrow in data set (should match rain today)
+length(which(df$RainTomorrow == 'Yes'))/nrow(df)*100
+```
+
+Brisbane RainToday & RainTomorrow numbers do not match which could indicate a problem
+with the imputation.
+
+
+The color.plot function is interesting, but can only be used for 2 dimensions.
+
+Humidity9am and Humidity3pm are correlated and may be interesting to look at.
+A change in humidity could be related to rainfall.
+
+```{r}
+autHum <- autumn[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(autHum, quan=1/2, alpha=0.025, sub='Autumn Humidity9am vs Humidity3pm')
+dfAutHumOutliers <- autumn[which(colorData$outliers),]
+
+sprHum <- spring[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(sprHum, quan=1/2, alpha=0.025, sub='Spring Humidity9am vs Humidity3pm')
+dfSprHumOutliers <- spring[which(colorData$outliers),]
+
+sumHum <- summer[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(sumHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
+dfSumHumOutliers <- summer[which(colorData$outliers),]
+
+winHum <- winter[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(winHum, quan=1/2, alpha=0.025, sub='Winter Humidity9am vs Humidity3pm')
+dfWinHumOutliers <- winter[which(colorData$outliers),]
+
+HumidityOutliers <- rbind(dfAutHumOutliers, dfSprHumOutliers, dfSumHumOutliers, dfWinHumOutliers)
+```
+
+
+```{r}
+#number of rainy days in the Humidity outliers data
+length(which(HumidityOutliers$RainToday == 'Yes'))
+#percentage of days with rainfall in the Humidity outliers data
+length(which(HumidityOutliers$RainToday == 'Yes'))/nrow(HumidityOutliers)*100
+
+#number of day with rain tomorrow in the Humidity outliers data
+length(which(HumidityOutliers$RainTomorrow == 'Yes'))
+#percentage of days with rain tomorrow in the Humidity outliers data
+length(which(HumidityOutliers$RainTomorrow == 'Yes'))/nrow(HumidityOutliers)*100
+```
 
