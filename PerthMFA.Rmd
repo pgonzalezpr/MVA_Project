@@ -24,6 +24,9 @@ saveimages <- "PlotsMFA/Perth/"
 ```
 
 PACKAGES
+```{r}
+
+```
 
 ```{r}
 library(FactoMineR)
@@ -219,6 +222,16 @@ fviz_mfa_ind(res.mfa,
              addEllipses = TRUE, ellipse.type = "confidence", 
              repel = TRUE, 
              invisible = "quali.var", geom = "point", title = "Individuals by Season MFA - Perth")
+#dev.off()
+```
+
+```{r}
+#png(paste(saveimages,"IndsSeasonRain.png",sep=""),width = 600, height = 350)
+basic_plot <- fviz_mfa_ind(res.mfa, label="none")
+ggplot(cbind(basic_plot$data,df[,c("Season","RainTomorrow")]),
+aes(x=x,y=y,col=Season,alpha=RainTomorrow, )) + ggtitle("Individuals MFA - Perth") + geom_point() + theme_bw() +
+  scale_color_manual(values=c("#edae49", "#66a182", "#d1495b", "#00798c")) +
+  scale_alpha_manual(values = c(0.2,0.9))
 #dev.off()
 ```
 
