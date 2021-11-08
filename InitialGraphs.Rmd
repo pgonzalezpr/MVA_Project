@@ -1,0 +1,158 @@
+---
+title: 'Outputs first section'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo Gonzalez, Mateo Jacome
+  Gonzalez y Pedro Gonzalez Prado
+output:
+  html_document:
+    self_contained: false
+---
+
+```{r, ini, message=FALSE, warning=FALSE, results='hide'}
+
+# CLEARING ENVIRONMENT #
+rm(list=ls(all=TRUE))
+#PREPARE WORK DIRECTORY 
+#current_path <- getActiveDocumentContext()$path 
+#setwd(dirname(current_path ))
+
+#INSTALL & LOAD LIBRARIES
+# Required packages
+pkgs<-c("corrplot","cowplot","dplyr","dygraphs","DT","factoextra","FactoMineR","ggplot2","ggrepel","ggspatial","googleway","grid","gridExtra","heatmaply","htmlwidgets","knitr","lattice","leaflet","lubridate","naniar","plotly","rnaturalearth","rnaturalearthdata","rstudioapi","sf","sm","summarytools","mice","tidyr","tidyverse","VIM","visdat")
+
+# Non-installed packages
+inspkgs<-pkgs[!pkgs %in% installed.packages()]
+for(libs in inspkgs) install.packages(libs, repos = "http://cran.us.r-project.org")
+
+# Loading required
+sapply(pkgs,require,character=TRUE)
+
+# Import initial dataset
+df <- read.csv("weatherAUSOriginal.csv", stringsAsFactors = TRUE)
+
+```
+
+### Map
+
+```{r out.width='100%', echo=FALSE}
+#Coordinates of selected cities
+lon <- c(145.772200, 115.860500, 153.074)
+lat <- c(-16.920700, -31.952900, -27.3416)
+Name <- c("Cairns", "Perth", "Brisbane")
+# Join the variables to create a data frame
+locations <- data.frame(Name,lat,lon)
+
+leaflet(data = locations) %>% addTiles() %>% 
+    setView(lng = 135, lat = -28, zoom = 04) %>%
+  addMarkers(~lon, ~lat, popup = ~as.character(Name), label = ~as.character(Name))
+
+```
+Preprocessing:
+
+
+```{r}
+#CHANGE VARIABLE TYPE
+df$Date <- as.Date(df$Date)
+
+#Add ID column
+ID = c(1:nrow(df))
+df <- add_column(df, ID, .before=1)
+
+###TO DO: SET LEVELS FOR WIND DIRECTION - MATEO
+df$WindGustDir<- factor(df$WindGustDir, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "unkn"))
+df$WindDir9am<- factor(df$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm"))
+df$WindDir3pm<- factor(df$WindDir3pm, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm")) 
+df[, "Year"] <- as.factor(format(df[,"Date"], "%Y"))
+df[, "Month"] <- as.factor(format(df[,"Date"], "%B"))
+df[, "Day"] <- as.integer(format(df[,"Date"], "%d"))
+df <- df %>% relocate(c("Year","Month","Day"), .after = "Date")
+
+#SUBSET DATA
+##By date
+df <- subset(df, Date < median(df$Date))
+## Spliting DF by location
+df2 <- split(df,df$Location)
+## Subseting by Location
+df3 <- df2[c("Brisbane", "Cairns", "Perth")]
+```
+
+Missing stats per city: Histogram
+
+```{r}
+fun02<-function(x){missing_stats<-colSums(is.na(x))*100/nrow(x)
+                   mis_ind = rowSums(is.na(x))
+                   qplot(mis_ind, geom="histogram",
+                   binwidth = 2,  
+                   main = "Histogram of missing values per row", 
+                   xlab = "ID",  
+                   fill=I("darkblue"))}
+
+#missing_stats <- colSums(is.na(df))*100/nrow(df)
+lapply(df3,fun02)
+```
+
+Summary stats per city
+
+```{r}
+fun03<-function(x){print(dfSummary(x, plain.ascii  = FALSE, 
+          style        = "grid", 
+          graph.magnif = 0.75, 
+          valid.col    = FALSE,
+          tmp.img.dir  = "/tmp"))}
+
+#missing_stats <- colSums(is.na(df))*100/nrow(df)
+lapply(df3,fun03)
+```
+
+Complete cases by city
+
+```{r}
+fun04<-function(x){sum(complete.cases(x))}
+
+missing_stats <- colSums(is.na(df))*100/nrow(df)
+#lapply(df3,fun04)
+```
+
+Missing data per column and row graph per city
+
+```{r}
+fun05<-function(x){vis_dat(x, sort_type = TRUE, palette = "cb_safe")}
+
+#missing_stats <- colSums(is.na(df))*100/nrow(df)
+#lapply(df3,fun05)
+
+fun06<-function(x){missing_stats <- colSums(is.na(x))*100/nrow(x)
+                   vis_miss(x)
+                  aggr(x, numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=0.1, ylab=c("Missing data"," "),border=NA)}
+
+#missing_stats <- colSums(is.na(df))*100/nrow(df)
+
+lapply(df3,fun06)
+
+
+fun07<-function(x){ sort(colSums(is.na(x)),decreasing = TRUE)}
+                    #sort(colSums(is.na(x))/nrow(x)*100,decreasing = TRUE )}
+lapply(df3,fun07)
+
+```
+
+Unifying locations separatedly as a single DF
+
+```{r, results='asis'}
+dt<-rbind(df3[[1]],df3[[2]],df3[[3]])
+
+dfSummary(dt)
+
+# Calculating missing values
+missing_stats <- colSums(is.na(dt))*100/nrow(dt)
+
+# Graph for three locations
+vis_miss(dt)
+
+aggr(dt, col=c('grey','#133366'), numbers=TRUE, sortVars=TRUE, labels=names(df), cex.axis=.5, gap=0.1, ylab=c("Missing data"," "),border=NA)
+
+
+
+dfSummary(dt, varnumbers = FALSE, valid.col = FALSE,style = "grid",headings=FALSE, graph.magnif = 0.75, plain.ascii = FALSE)
+```
+
+
