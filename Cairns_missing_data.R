@@ -306,16 +306,27 @@ summary(df)
 
 #https://www.earthdatascience.org/courses/earth-analytics/time-series-data/summarize-time-series-by-month-in-r/
 # plot rainfall as time series
-df %>%
+require(gridExtra)
+
+plot1 <- df_original %>%
   ggplot(aes(x = Date, y = Rainfall)) +
-  geom_point(color = "darkorchid4") +
+  geom_point(color = "darkblue") +
   labs(title = "Rainfall",
        y = "Daily rainfall (mm)",
        x = "Date") + theme_bw(base_size = 15)
 
+plot2 <- df_Cairns %>%
+  ggplot(aes(x = Date, y = Rainfall)) +
+  geom_point(color = "orange") +
+  labs(title = "Rainfall",
+       y = "Daily rainfall (mm)",
+       x = "Date") + theme_bw(base_size = 15)
+
+grid.arrange(plot1, plot2, ncol=1)
 
 ###Importing data set after time series imputations.
 df_Cairns <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv", stringsAsFactors = T)
+df_Cairns$Date <- as.Date(df_Cairns$Date)
 
 #Create function to plot density for original and imputed data
 #accepts the attribute name as string,city as string, and legend location as string.
