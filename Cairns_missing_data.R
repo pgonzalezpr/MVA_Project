@@ -226,25 +226,51 @@ densityplot(tempData)
 
 summary(completedData)
 
-
 #Compare density plots of original data with completed data
-plot(density(df$Evaporation, na.rm=TRUE), col='red')
-lines(density(completedData$Evaporation), col='blue')
 
-plot(density(df$WindGustSpeed, na.rm=TRUE), col='red')
-lines(density(completedData$WindGustSpeed), col='blue')
+#Create function to plot density for original and imputed data
+#accepts the attribute name as string,city as string, and legend location as string.
+compare_densities <- function(attribute, city, legloc) {
+  plot(density(df[,attribute], na.rm=TRUE), col='darkblue', lwd=3,
+       main=attribute, sub=city)
+  lines(density(completedData[,attribute]), col='orange')
+  legend(x= legloc,legend=c("original", "imputed"),
+         col = c('darkblue','orange'), lty=c(1,1), 
+         lwd=c(3,1), cex=0.7)
+}
 
-plot(density(df$Sunshine, na.rm=TRUE), col='red')
-lines(density(completedData$Sunshine), col='blue')
+city <- "Cairns"
+compare_densities("Evaporation", city, "topright")
+compare_densities("WindGustSpeed", city, "topright")
+compare_densities("Sunshine", city, "topleft")
+compare_densities("Cloud9am", city, "topleft")
+compare_densities("Cloud3pm", city, "topleft")
+compare_densities("Rainfall", city, "topright")
 
-plot(density(df$Cloud9am, na.rm=TRUE), col='red')
-lines(density(completedData$Cloud9am), col='blue')
+###Old plotting code below, replaced with function above.
 
-plot(density(df$Cloud3pm, na.rm=TRUE), col='red')
-lines(density(completedData$Cloud3pm), col='blue')
-
-plot(density(df$Rainfall, na.rm=TRUE), col='red')
-lines(density(completedData$Rainfall), col='blue')
+# plot(density(df[,"Evaporation"], na.rm=TRUE), col='darkblue', lwd=3,
+#      main="Evaporation", sub="Cairns")
+# lines(density(completedData[,"Evaporation"]), col='orange')
+# legend(x= "topright",legend=c("original", "imputed"),
+#       col = c('darkblue','orange'), lty=c(1,1), 
+#       lwd=c(3,1), cex=0.7)
+# 
+# 
+# plot(density(df$WindGustSpeed, na.rm=TRUE), col='red')
+# lines(density(completedData$WindGustSpeed), col='blue')
+# 
+# plot(density(df$Sunshine, na.rm=TRUE), col='red')
+# lines(density(completedData$Sunshine), col='blue')
+# 
+# plot(density(df$Cloud9am, na.rm=TRUE), col='red')
+# lines(density(completedData$Cloud9am), col='blue')
+# 
+# plot(density(df$Cloud3pm, na.rm=TRUE), col='red')
+# lines(density(completedData$Cloud3pm), col='blue')
+# 
+# plot(density(df$Rainfall, na.rm=TRUE), col='red')
+# lines(density(completedData$Rainfall), col='blue')
 
 ###Density plots of imputed variables match density plots of original variables
 ###with NA's removed.
