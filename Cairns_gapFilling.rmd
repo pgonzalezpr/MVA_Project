@@ -128,13 +128,11 @@ plot(hgHumid9_Evap, col=c2, freq=FALSE, main="Side by Side Histograms for Humidi
      xlab="Relative Humidity Percentage at 9am",) # Plot 1st histogram using a transparent color
 plot(hgHumid9, col=c1, add=TRUE,freq=FALSE) # Add 2nd histogram using different color
 legend("topleft", c("All Days", "Days with Evaporation NA"), fill=c(c1,c2))
-
-
-###The missing values for Evaporation are clearly not random. They tend to occur on days
-###with higher than average rainfall and humidity. In theory, the higher the relative humidity,
-###the lower the evaporation should be.
 ```
 
+The missing values for Evaporation are clearly not random. They tend to occur on days
+with higher than average rainfall and humidity. In theory, the higher the relative humidity,
+the lower the evaporation should be.
 
 ```{r,  message=FALSE, warning=FALSE, results='hide'}
 #CHECK NAs FOR SUNSHINE
@@ -143,9 +141,12 @@ na_Sunshine <- which(is.na(df_NAs$Sunshine))
 #check rows of observations missing Sunshine
 df_NAs[na_Sunshine,]
 
-###The missing values for Sunshine do not appear random. All days are in Summer, 
-###and on days with rainfall, high cloud cover, or both.
+```
 
+The missing values for Sunshine do not appear random. All days are in Summer, 
+and on days with rainfall, high cloud cover, or both.
+
+```{r}
 #CHECK NAs FOR WIND GUST SPEED
 #create variable to identify rows that are missing WindGustSpeed
 na_GustSpeed <- which(is.na(df_NAs$WindGustSpeed))
@@ -222,29 +223,40 @@ completedData <- complete(tempData,1)
 densityplot(tempData)
 
 summary(completedData)
+```
 
+
+```{r}
 
 #Compare density plots of original data with completed data
-plot(density(df$Evaporation, na.rm=TRUE), col='red')
-lines(density(completedData$Evaporation), col='blue')
 
-plot(density(df$WindGustSpeed, na.rm=TRUE), col='red')
-lines(density(completedData$WindGustSpeed), col='blue')
+#Create function to plot density for original and imputed data
+#accepts the attribute name as string,city as string, and legend location as string.
+compare_densities <- function(attribute, city, legloc) {
+  plot(density(df[,attribute], na.rm=TRUE), col='darkblue', lwd=3,
+       main=attribute, sub=city)
+  lines(density(completedData[,attribute]), col='orange')
+  legend(x= legloc,legend=c("original", "imputed"),
+         col = c('darkblue','orange'), lty=c(1,1), 
+         lwd=c(3,1), cex=0.7)
+}
 
-plot(density(df$Sunshine, na.rm=TRUE), col='red')
-lines(density(completedData$Sunshine), col='blue')
+city <- "Cairns"
+compare_densities("Evaporation", city, "topright")
+compare_densities("WindGustSpeed", city, "topright")
+compare_densities("Sunshine", city, "topleft")
+compare_densities("Cloud9am", city, "topleft")
+compare_densities("Cloud3pm", city, "topleft")
+compare_densities("Rainfall", city, "topright")
 
-plot(density(df$Cloud9am, na.rm=TRUE), col='red')
-lines(density(completedData$Cloud9am), col='blue')
+```
 
-plot(density(df$Cloud3pm, na.rm=TRUE), col='red')
-lines(density(completedData$Cloud3pm), col='blue')
 
-plot(density(df$Rainfall, na.rm=TRUE), col='red')
-lines(density(completedData$Rainfall), col='blue')
+Density plots of imputed variables match density plots of original variables with NA's removed.
 
-###Density plots of imputed variables match density plots of original variables
-###with NA's removed.
+```{r}
+#Create copy of original data before merging the imputations.
+df_original <- df
 
 
 #Replace original data with completed data from MICE
@@ -487,6 +499,6 @@ wind9
 It seems that performing MICE for the missing months parting from the available variables + TempRange has resulted in an acceptable imputation, as the values tend to follow the time series' trends. Thus, we'll output the completed dataset to a .csv file and use it to perform our analysis.
 
 ```{r}
-write.csv(df6,'Completed_Location_CSVs/df_Cairns_completed.csv', row.names = FALSE)
+#write.csv(df6,'Completed_Location_CSVs/df_Cairns_completed.csv', row.names = FALSE)
 ```
 
