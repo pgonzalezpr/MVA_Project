@@ -275,6 +275,8 @@ compare_densities("Rainfall", city, "topright")
 ###Density plots of imputed variables match density plots of original variables
 ###with NA's removed.
 
+#Copy original data before completing data with MICE imputations.
+df_original <- df
 
 #Replace original data with completed data from MICE
 df[,c("Month","MinTemp","MaxTemp","Rainfall","Evaporation",
@@ -311,4 +313,37 @@ df %>%
        y = "Daily rainfall (mm)",
        x = "Date") + theme_bw(base_size = 15)
 
+
+###Importing data set after time series imputations.
+df_Cairns <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv", stringsAsFactors = T)
+
+#Create function to plot density for original and imputed data
+#accepts the attribute name as string,city as string, and legend location as string.
+compare_densities <- function(data1, data2, attribute, city, legloc) {
+  plot(density(data1[,attribute], na.rm=TRUE), col='darkblue', lwd=3,
+       main=attribute, sub=city)
+  lines(density(data2[,attribute]), col='orange')
+  legend(x= legloc,legend=c("original", "imputed"),
+         col = c('darkblue','orange'), lty=c(1,1), 
+         lwd=c(3,1), cex=0.7)
+}
+
+
+city <- "Cairns"
+compare_densities(df_original, df_Cairns, "Evaporation", city, "topright")
+compare_densities(df_original, df_Cairns, "WindGustSpeed", city, "topright")
+compare_densities(df_original, df_Cairns, "Sunshine", city, "topleft")
+compare_densities(df_original, df_Cairns, "Cloud9am", city, "topleft")
+compare_densities(df_original, df_Cairns, "Cloud3pm", city, "topleft")
+compare_densities(df_original, df_Cairns, "Rainfall", city, "topright")
+compare_densities(df_original, df_Cairns, "MinTemp", city, "topright")
+compare_densities(df_original, df_Cairns, "MaxTemp", city, "topright")
+compare_densities(df_original, df_Cairns, "Humidity9am", city, "topright")
+compare_densities(df_original, df_Cairns, "Humidity3pm", city, "topright")
+compare_densities(df_original, df_Cairns, "Temp9am", city, "topright")
+compare_densities(df_original, df_Cairns, "Temp3pm", city, "topright")
+compare_densities(df_original, df_Cairns, "Pressure9am", city, "topleft")
+compare_densities(df_original, df_Cairns, "Pressure3pm", city, "topleft")
+compare_densities(df_original, df_Cairns, "WindSpeed9am", city, "topright")
+compare_densities(df_original, df_Cairns, "WindSpeed3pm", city, "topright")
 
