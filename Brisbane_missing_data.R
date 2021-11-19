@@ -308,6 +308,9 @@ df_NAs[na_Cloud9,]
 ##imputation using row identifier
 #df$WindDir3pm[na_WindDir3pm] <- 'Calm'
 
+#Copy original data before completing data with MICE imputations.
+df_original <- df
+
 # IMPUTATION BY MICE
 
 md.pattern(df)
@@ -434,4 +437,38 @@ df %>%
        y = "Daily rainfall (mm)",
        x = "Date") + theme_bw(base_size = 15)
 
+
+###Importing data set after time series imputations.
+df_Brisbane <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv", stringsAsFactors = T)
+df_Brisbane$Date <- as.Date(df_Brisbane$Date)
+
+#Create function to plot density for original and imputed data
+#accepts the attribute name as string,city as string, and legend location as string.
+compare_densities <- function(data1, data2, attribute, city, legloc) {
+  plot(density(data1[,attribute], na.rm=TRUE), col='darkblue', lwd=3,
+       main=attribute, sub=city)
+  lines(density(data2[,attribute]), col='orange')
+  legend(x= legloc,legend=c("original", "imputed"),
+         col = c('darkblue','orange'), lty=c(1,1), 
+         lwd=c(3,1), cex=0.7)
+}
+
+
+city <- "Brisbane"
+compare_densities(df_original, df_Brisbane, "Evaporation", city, "topright")
+compare_densities(df_original, df_Brisbane, "WindGustSpeed", city, "topright")
+compare_densities(df_original, df_Brisbane, "Sunshine", city, "topleft")
+compare_densities(df_original, df_Brisbane, "Cloud9am", city, "topleft")
+compare_densities(df_original, df_Brisbane, "Cloud3pm", city, "topleft")
+compare_densities(df_original, df_Brisbane, "Rainfall", city, "topright")
+compare_densities(df_original, df_Brisbane, "MinTemp", city, "topright")
+compare_densities(df_original, df_Brisbane, "MaxTemp", city, "topright")
+compare_densities(df_original, df_Brisbane, "Humidity9am", city, "topright")
+compare_densities(df_original, df_Brisbane, "Humidity3pm", city, "topright")
+compare_densities(df_original, df_Brisbane, "Temp9am", city, "topright")
+compare_densities(df_original, df_Brisbane, "Temp3pm", city, "topright")
+compare_densities(df_original, df_Brisbane, "Pressure9am", city, "topleft")
+compare_densities(df_original, df_Brisbane, "Pressure3pm", city, "topleft")
+compare_densities(df_original, df_Brisbane, "WindSpeed9am", city, "topright")
+compare_densities(df_original, df_Brisbane, "WindSpeed3pm", city, "topright")
 
