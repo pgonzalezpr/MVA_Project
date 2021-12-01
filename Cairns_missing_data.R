@@ -226,29 +226,57 @@ densityplot(tempData)
 
 summary(completedData)
 
-
 #Compare density plots of original data with completed data
-plot(density(df$Evaporation, na.rm=TRUE), col='red')
-lines(density(completedData$Evaporation), col='blue')
 
-plot(density(df$WindGustSpeed, na.rm=TRUE), col='red')
-lines(density(completedData$WindGustSpeed), col='blue')
+#Create function to plot density for original and imputed data
+#accepts the attribute name as string,city as string, and legend location as string.
+compare_densities <- function(attribute, city, legloc) {
+  plot(density(df[,attribute], na.rm=TRUE), col='darkblue', lwd=3,
+       main=attribute, sub=city)
+  lines(density(completedData[,attribute]), col='orange')
+  legend(x= legloc,legend=c("original", "imputed"),
+         col = c('darkblue','orange'), lty=c(1,1), 
+         lwd=c(3,1), cex=0.7)
+}
 
-plot(density(df$Sunshine, na.rm=TRUE), col='red')
-lines(density(completedData$Sunshine), col='blue')
+city <- "Cairns"
+compare_densities("Evaporation", city, "topright")
+compare_densities("WindGustSpeed", city, "topright")
+compare_densities("Sunshine", city, "topleft")
+compare_densities("Cloud9am", city, "topleft")
+compare_densities("Cloud3pm", city, "topleft")
+compare_densities("Rainfall", city, "topright")
 
-plot(density(df$Cloud9am, na.rm=TRUE), col='red')
-lines(density(completedData$Cloud9am), col='blue')
+###Old plotting code below, replaced with function above.
 
-plot(density(df$Cloud3pm, na.rm=TRUE), col='red')
-lines(density(completedData$Cloud3pm), col='blue')
-
-plot(density(df$Rainfall, na.rm=TRUE), col='red')
-lines(density(completedData$Rainfall), col='blue')
+# plot(density(df[,"Evaporation"], na.rm=TRUE), col='darkblue', lwd=3,
+#      main="Evaporation", sub="Cairns")
+# lines(density(completedData[,"Evaporation"]), col='orange')
+# legend(x= "topright",legend=c("original", "imputed"),
+#       col = c('darkblue','orange'), lty=c(1,1), 
+#       lwd=c(3,1), cex=0.7)
+# 
+# 
+# plot(density(df$WindGustSpeed, na.rm=TRUE), col='red')
+# lines(density(completedData$WindGustSpeed), col='blue')
+# 
+# plot(density(df$Sunshine, na.rm=TRUE), col='red')
+# lines(density(completedData$Sunshine), col='blue')
+# 
+# plot(density(df$Cloud9am, na.rm=TRUE), col='red')
+# lines(density(completedData$Cloud9am), col='blue')
+# 
+# plot(density(df$Cloud3pm, na.rm=TRUE), col='red')
+# lines(density(completedData$Cloud3pm), col='blue')
+# 
+# plot(density(df$Rainfall, na.rm=TRUE), col='red')
+# lines(density(completedData$Rainfall), col='blue')
 
 ###Density plots of imputed variables match density plots of original variables
 ###with NA's removed.
 
+#Copy original data before completing data with MICE imputations.
+df_original <- df
 
 #Replace original data with completed data from MICE
 df[,c("Month","MinTemp","MaxTemp","Rainfall","Evaporation",
@@ -278,11 +306,55 @@ summary(df)
 
 #https://www.earthdatascience.org/courses/earth-analytics/time-series-data/summarize-time-series-by-month-in-r/
 # plot rainfall as time series
-df %>%
+require(gridExtra)
+
+plot1 <- df_original %>%
   ggplot(aes(x = Date, y = Rainfall)) +
-  geom_point(color = "darkorchid4") +
+  geom_point(color = "darkblue") +
   labs(title = "Rainfall",
        y = "Daily rainfall (mm)",
        x = "Date") + theme_bw(base_size = 15)
 
+plot2 <- df_Cairns %>%
+  ggplot(aes(x = Date, y = Rainfall)) +
+  geom_point(color = "orange") +
+  labs(title = "Rainfall",
+       y = "Daily rainfall (mm)",
+       x = "Date") + theme_bw(base_size = 15)
+
+grid.arrange(plot1, plot2, ncol=1)
+
+###Importing data set after time series imputations.
+df_Cairns <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv", stringsAsFactors = T)
+df_Cairns$Date <- as.Date(df_Cairns$Date)
+
+#Create function to plot density for original and imputed data
+#accepts the attribute name as string,city as string, and legend location as string.
+compare_densities <- function(data1, data2, attribute, city, legloc) {
+  plot(density(data1[,attribute], na.rm=TRUE), col='darkblue', lwd=3,
+       main=attribute, sub=city)
+  lines(density(data2[,attribute]), col='orange')
+  legend(x= legloc,legend=c("original", "imputed"),
+         col = c('darkblue','orange'), lty=c(1,1), 
+         lwd=c(3,1), cex=0.7)
+}
+
+
+city <- "Cairns"
+compare_densities(df_original, df_Cairns, "Evaporation", city, "topright")
+compare_densities(df_original, df_Cairns, "WindGustSpeed", city, "topright")
+compare_densities(df_original, df_Cairns, "Sunshine", city, "topleft")
+compare_densities(df_original, df_Cairns, "Cloud9am", city, "topleft")
+compare_densities(df_original, df_Cairns, "Cloud3pm", city, "topleft")
+compare_densities(df_original, df_Cairns, "Rainfall", city, "topright")
+compare_densities(df_original, df_Cairns, "MinTemp", city, "topright")
+compare_densities(df_original, df_Cairns, "MaxTemp", city, "topright")
+compare_densities(df_original, df_Cairns, "Humidity9am", city, "topright")
+compare_densities(df_original, df_Cairns, "Humidity3pm", city, "topright")
+compare_densities(df_original, df_Cairns, "Temp9am", city, "topright")
+compare_densities(df_original, df_Cairns, "Temp3pm", city, "topright")
+compare_densities(df_original, df_Cairns, "Pressure9am", city, "topleft")
+compare_densities(df_original, df_Cairns, "Pressure3pm", city, "topleft")
+compare_densities(df_original, df_Cairns, "WindSpeed9am", city, "topright")
+compare_densities(df_original, df_Cairns, "WindSpeed3pm", city, "topright")
 

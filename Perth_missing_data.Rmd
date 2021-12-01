@@ -122,7 +122,7 @@ Histos<-lapply(a[-1],fun02)
 do.call(grid.arrange, Histos)
 
 cor_matrix = cor(numrain_data[,c(4:19)]) #starting from column 4: MinTemp
-corrplot(cor_matrix, method = 'number') # colorful number
+corrplot(cor_matrix, method = 'number', number.cex=0.5) # colorful number
 
 ```
 

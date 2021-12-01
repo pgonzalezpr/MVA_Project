@@ -1,0 +1,79 @@
+---
+title: "Train Test Split"
+author: "Kat Weissman"
+date: "11/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+
+```{r}
+#LOAD DATA
+dfP <- read.csv("Completed_Location_CSVs/df_Perth_completed.csv", stringsAsFactors = T)
+dfC <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv", stringsAsFactors = T)
+dfB <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv", stringsAsFactors = T)
+#CHANGE VARIABLE TYPE
+dfP$Date <- as.Date(dfP$Date)
+dfC$Date <- as.Date(dfC$Date)
+dfB$Date <- as.Date(dfB$Date)
+```
+
+For validation of the model, it is necessary to divide the time series sequentially.
+The last year of data can be used for validation of the model. June 1, 2013 is the last
+date for all locations, therefore a logical division would be from the first date
+until May 31, 2012 for the training data sets. The time series for each location 
+potentially begins on a different date.
+
+The test data sets will all be the same length from June 1, 2012 until June 1, 2013. 
+It is important to test the models on a full year of data due to weather differences 
+through the months and seasons.
+
+
+```{r}
+#PERTH DATES
+min(dfP$Date)
+max(dfP$Date)
+
+#SUBSET DATA BY MAY 31, 2012
+train_dfP <- subset(dfP, Date <= "2012-05-31")
+test_dfP <- subset(dfP, Date > "2012-05-31")
+
+#PERCENTAGE OF SPLIT
+nrow(train_dfP)/nrow(dfP)*100
+nrow(test_dfP)/nrow(dfP)*100
+```
+
+
+
+```{r}
+#Brisbane dates
+min(dfB$Date)
+max(dfB$Date)
+
+#SUBSET DATA BY MAY 31, 2012
+train_dfB <- subset(dfB, Date <= "2012-05-31")
+test_dfB <- subset(dfB, Date > "2012-05-31")
+
+#PERCENTAGE OF SPLIT
+nrow(train_dfB)/nrow(dfB)*100
+nrow(test_dfB)/nrow(dfB)*100
+```
+
+```{r}
+#Cairns dates
+min(dfC$Date)
+max(dfC$Date)
+
+#SUBSET DATA BY MAY 31, 2012
+train_dfC <- subset(dfC, Date <= "2012-05-31")
+test_dfC <- subset(dfC, Date > "2012-05-31")
+
+#PERCENTAGE OF SPLIT
+nrow(train_dfC)/nrow(dfC)*100
+nrow(test_dfC)/nrow(dfC)*100
+```
+
+

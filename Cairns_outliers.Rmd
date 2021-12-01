@@ -2,10 +2,9 @@
 title: "Outliers"
 output: html_document
 ---
-
 ----ANDREA's analysis begins-----
 
-# Outliers Brisbane
+# Outliers Cairns
 ```{r}
 library(chemometrics)
 library(DMwR2)
@@ -15,7 +14,7 @@ library(ggplot2)
 library(GGally)
 library(car)
 
-df <- read.csv("Location CSVs/df_Brisbane_MICE.csv")
+df <- read.csv("Location CSVs/df_Cairns_MICE.csv")
 
 ```
 
@@ -30,7 +29,7 @@ df.active <- df[, c("MinTemp", "MaxTemp", "Rainfall", "Evaporation", "Sunshine",
 
 ```{r}
 
-invisible(lapply(1:ncol(df.active), function(i) Boxplot(df.active[, i], ylab='', main=paste("Boxplot", names(df.active)[i], sep=" "), col='orange3', id=list(location='avoid'))))
+invisible(lapply(1:ncol(df.active), function(i) Boxplot(df.active[, i], ylab='', main=paste("Boxplot", names(df.active)[i], sep=" "), col='green3', id=list(location='avoid'))))
 
 out <- boxplot.stats(df.active$Pressure9am)$out
 out_ind <- which(df.active$Pressure9am %in% c(out))
@@ -39,22 +38,28 @@ Y<- data.frame(df.active[out_ind, ],df[out_ind,1])
 Y
 
 median(df$Rainfall)
+
+df_ordenado <- df.active[order(df.active$WindSpeed9am), ]
+head(df_ordenado)
+df_ordenado
 ```
 
 We can observe that the principal outliers are:
-- Boxplot MaxTemp observation 1044
-- Boxplot Rainfall observations <b>1274, 1612</b>, 597, 924...
-- Boxplot Evaporation observations 472, 146, 833, 895 and 1261
-- Boxplot WindGustSpeed observation <b>470</b>, 143, 1611, 1571, 1612, 146, 773...
-- Boxplot WindSpeed9am observation <b>1612</b>, 838, 146, 1535, 471...
-- Boxplot WindSpeed3pm observations 471, 773, 152, 146
-- Boxplot Humidity9am observations 471, 474, 422, 454, 472, 473, 1501, 452...
-- Boxplot Humidity3pm observations 422, 450, 453, 1368, 1617, 471, 455, 454...
-- Boxplot Pressure9am observations 1612, 145, 1268, 146, 1230...
-- Boxplot Pressure3pm observations 145, 146, 1612, 1593, 1286...
-- Boxplot Temp3pm observations 1260, 1044
+- Boxplot MinTemp observations 901, 963, 935, 936, 1321, 898...
+- Boxplot MaxTemp observations 1460, 1458, 431, 1242, 910, 177...
+- Boxplot Rainfall observations <b>43, 796</b>, 1023, 817, 1176...
+- Boxplot Evaporation observations 752, 198, 638, 1235, 1200, 1177...
+- Boxplot WindGustSpeed observation <b>794</b>, 1454, 1504, 795, 420, 1534, 1484
+- Boxplot WindSpeed9am observation 1524, 794, 286, 689, 615...
+- Boxplot WindSpeed3pm observations 469, 987, 944, 821, 455, 415
+- Boxplot Humidity9am observations 1320, 309, 984, 1321, 955
+- Boxplot Humidity3pm observations 818, 795, 96, 298, 309...
+- Boxplot Pressure9am observations 1454, 1130, 1455, 1129, 1131...
+- Boxplot Pressure3pm observations 1130, 1454, 1129, 1455, 1456...
+- Boxplot Temp9am observations 898, 934, 901
+- Boxplot Temp3pm observations 242, 948
 
-We can see that the observations with most of the variables with outliers are: 1612, 146, 471. We also need to destacate that the observations 1274 and 1612 are strong outliers of the variable Rainfall, the observation 470 that is a strong outlier of the variable WindGustSpeed, and observation 1612 that is a strong outlier of the variable WindSpeed9am. 
+We can see that the observations with most of the variables with outliers is 1454. We also need to destacate that the observations 43 and 796 are strong outliers of the variable Rainfall, and the observation 794 that is a strong outlier of the variable WindGustSpeed. 
 
 # DETECTING MULTIVARIATE OUTLIERS WITH MAHALANOBIS DSTANCE
 
@@ -67,7 +72,7 @@ Z1 <- data.frame(df.active[mdi>cutoff,],df[mdi>cutoff,1])
 Z1
 
 # We select the ones with the greatest Mahalanobis distance
-cutoff<-80
+cutoff<-65
 Z2 <- data.frame(df.active[mdi>cutoff,],df[mdi>cutoff,1])
 Z2
 ```
@@ -99,12 +104,12 @@ B1 <- data.frame(df.active[b,],df[b,1])
 B1
 
 # We select the ones with the greatest Mahalanobis distance
-b<-which(dis$rd>10)
+b<-which(dis$rd>9.5)
 
 B2 <- data.frame(df.active[b,],df[b,1])
 B2
 ```
-We can see that the ones with largest Mahalanobis robust distance are observations 899, 470 and 1612.
+We can see that the ones with largest Mahalanobis robust distance is observation 794.
 
 # DETECTING MULTIVARIATE OUTLIERS BY DENSITY OF LOCAL DISTANCES
 .
@@ -119,8 +124,8 @@ sort(outlier.scores,decreasing=T)[1:3]
 print(df[outliers,])
 
 ```
-We select the top 3 outliers that corresponds with observations 470, 1274 and 1612.
-We should remove these outliers and then treat them as missing data.
+We select the top 3 outliers that corresponds with observations 794, 43 and 796
+We should remove these outliers and then treat them as missing data. 
 
 ^^^^ANDREA's analysis above ^^^^^
 
@@ -132,7 +137,7 @@ I start using the complete time series data without any NA's.
 library(mvoutlier)
 
 #LOAD DATA
-df <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv", stringsAsFactors = T)
+df <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv", stringsAsFactors = T)
 
 #CHANGE VARIABLE TYPE
 df$Date <- as.Date(df$Date)
@@ -150,10 +155,9 @@ so they are excluded.
 
 ```{r}
 #split data by season for outlier detection
-autumn <- subset(df, Season == "autumn")
-spring <- subset(df, Season == "spring")
-summer <- subset(df, Season == "summer")
-winter <- subset(df, Season == "winter")
+wet <- subset(df, Season == "wet")
+dry <- subset(df, Season == "dry")
+
 
 #identify numeric variables excluding Rainfall and TempRange
 numvar <- c("WindSpeed9am","Humidity9am","Pressure9am","Cloud9am","Temp9am",
@@ -171,6 +175,7 @@ allDay <- c("MinTemp", "MaxTemp", "Evaporation","Sunshine", "WindGustSpeed")
 
 ```
 
+
 Since detecting outliers has shown to be useful for identifying days with rainfall,
 an interesting metric will be to compare the number of rainy days included in
 outliers compared with the number of rainy days in the complete data set.
@@ -185,10 +190,32 @@ length(which(df$RainTomorrow == 'Yes'))
 length(which(df$RainToday == 'Yes'))/nrow(df)*100
 #percentage of days with rain tomorrow in data set (should match rain today)
 length(which(df$RainTomorrow == 'Yes'))/nrow(df)*100
+
+#WET SEASON
+#number of days with rain today
+length(which(wet$RainToday == 'Yes'))
+#number of days with rain tomorrow 
+length(which(wet$RainTomorrow == 'Yes'))
+#percentage of days with rain today in data set
+length(which(wet$RainToday == 'Yes'))/nrow(wet)*100
+#percentage of days with rain tomorrow in data set 
+length(which(wet$RainTomorrow == 'Yes'))/nrow(wet)*100
+
+#DRY SEASON
+#number of days with rain today
+length(which(dry$RainToday == 'Yes'))
+#number of days with rain tomorrow 
+length(which(dry$RainTomorrow == 'Yes'))
+#percentage of days with rain today in data set
+length(which(dry$RainToday == 'Yes'))/nrow(dry)*100
+#percentage of days with rain tomorrow in data set 
+length(which(dry$RainTomorrow == 'Yes'))/nrow(dry)*100
 ```
 
-Brisbane RainToday & RainTomorrow numbers do not match which could indicate a problem
-with the imputation.
+33% of days are rainy in Cairns overall.
+47% of days in the wet season are rainy.
+16% of days in the dry season are rainy.
+
 
 
 The color.plot function is interesting, but can only be used for 2 dimensions.
@@ -197,25 +224,17 @@ Humidity9am and Humidity3pm are correlated and may be interesting to look at.
 A change in humidity could be related to rainfall.
 
 ```{r}
-autHum <- autumn[,c("Humidity9am","Humidity3pm")]
-colorData <- color.plot(autHum, quan=1/2, alpha=0.025, sub='Autumn Humidity9am vs Humidity3pm')
-dfAutHumOutliers <- autumn[which(colorData$outliers),]
+wetHum <- wet[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(wetHum, quan=1/2, alpha=0.025, sub='Wet Season Humidity9am vs Humidity3pm')
+dfWetHumOutliers <- wet[which(colorData$outliers),]
 
-sprHum <- spring[,c("Humidity9am","Humidity3pm")]
-colorData <- color.plot(sprHum, quan=1/2, alpha=0.025, sub='Spring Humidity9am vs Humidity3pm')
-dfSprHumOutliers <- spring[which(colorData$outliers),]
+dryHum <- dry[,c("Humidity9am","Humidity3pm")]
+colorData <- color.plot(dryHum, quan=1/2, alpha=0.025, sub='Dry Season Humidity9am vs Humidity3pm')
+dfDryHumOutliers <- dry[which(colorData$outliers),]
 
-sumHum <- summer[,c("Humidity9am","Humidity3pm")]
-colorData <- color.plot(sumHum, quan=1/2, alpha=0.025, sub='Summer Humidity9am vs Humidity3pm')
-dfSumHumOutliers <- summer[which(colorData$outliers),]
+HumidityOutliers <- rbind(dfDryHumOutliers, dfWetHumOutliers)
 
-winHum <- winter[,c("Humidity9am","Humidity3pm")]
-colorData <- color.plot(winHum, quan=1/2, alpha=0.025, sub='Winter Humidity9am vs Humidity3pm')
-dfWinHumOutliers <- winter[which(colorData$outliers),]
-
-HumidityOutliers <- rbind(dfAutHumOutliers, dfSprHumOutliers, dfSumHumOutliers, dfWinHumOutliers)
 ```
-
 
 ```{r}
 #number of rainy days in the Humidity outliers data
@@ -228,4 +247,43 @@ length(which(HumidityOutliers$RainTomorrow == 'Yes'))
 #percentage of days with rain tomorrow in the Humidity outliers data
 length(which(HumidityOutliers$RainTomorrow == 'Yes'))/nrow(HumidityOutliers)*100
 ```
+
+Overall, in the set of data recognized as Humidity Outliers, 51% of them have Rain Today
+and 57% of them have Rain Tomorrow. That is quite a bit higher than the 33% of rainy days
+in the overall Cairns data set.
+
+Next, we can evaluate if there is a difference in Humidity Outliers in the dry
+and wet seasons.
+
+```{r}
+#number of rainy days in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainToday == 'Yes'))
+#percentage of days with rainfall in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainToday == 'Yes'))/nrow(dfDryHumOutliers)*100
+
+#number of day with rain tomorrow in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainTomorrow == 'Yes'))
+#percentage of days with rain tomorrow in the Humidity outliers dry season data
+length(which(dfDryHumOutliers$RainTomorrow == 'Yes'))/nrow(dfDryHumOutliers)*100
+```
+
+In the humidity outliers for the dry season, 55% of them have Rain Tomorrow,
+which is substantially higher compared with 16% of overall days in the dry season 
+which have Rain Tomorrow.
+
+
+```{r}
+#number of rainy days in the Humidity outliers data
+length(which(dfWetHumOutliers$RainToday == 'Yes'))
+#percentage of days with rainfall in the Humidity outliers data
+length(which(dfWetHumOutliers$RainToday == 'Yes'))/nrow(dfWetHumOutliers)*100
+
+#number of day with rain tomorrow in the Humidity outliers data
+length(which(dfWetHumOutliers$RainTomorrow == 'Yes'))
+#percentage of days with rain tomorrow in the Humidity outliers data
+length(which(dfWetHumOutliers$RainTomorrow == 'Yes'))/nrow(dfWetHumOutliers)*100
+```
+
+The wet season has fewer outliers for humidity overall, but 61% of the outliers are rainy, 
+which is higher than the 47% of total days in the wet season that are rainy.
 

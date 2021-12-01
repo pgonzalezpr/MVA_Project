@@ -30,55 +30,55 @@ for(libs in inspkgs) install.packages(libs, repos = "http://cran.us.r-project.or
 # Loading required
 sapply(pkgs,require,character=TRUE)
 
-df_cai <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv",sep=",",stringsAsFactors = T)
-df_cai <- subset(df_cai, Location == "Cairns")
-df_cai$Date <- as.Date(df_cai$Date)
-
+df_per <- read.csv("Completed_Location_CSVs/df_Perth_completed.csv",sep=",",stringsAsFactors = T)
+df_per <- subset(df_per, Location == "Perth")
+df_per$Date <- as.Date(df_per$Date)
 ```
-
 
 ###PCA
 
 ```{r}
-df_cai_PCA <- df_cai[,c(7:29,4,30)]
-df_cai_PCA$WindDir3pm <- factor(df_cai_PCA$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm","unkn"))
-summary(df_cai_PCA)
 
-df_cai_names <- as.data.frame(names(df_cai_PCA))
-df_cai_names
+
+df_per_PCA <- df_per[,c(7:29,4,30)]
+df_per_PCA$WindDir3pm <- factor(df_per_PCA$WindDir9am, levels = c("N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "calm","unkn"))
+summary(df_per_PCA)
+
+df_per_names <- as.data.frame(names(df_per_PCA))
+df_per_names
 activePCA <- c(1,2,4,7:16,19:21)
 sup_quant <- c(22) 
 sup_qual <- c(3, 5, 6, 17, 18, 23, 24, 25)
-names(df_cai_PCA[,activePCA])
-names(df_cai_PCA[,sup_quant])
-names(df_cai_PCA[,sup_qual])
+names(df_per_PCA[,activePCA])
+names(df_per_PCA[,sup_quant])
+names(df_per_PCA[,sup_qual])
 
-cai.pca = PCA(df_cai_PCA, quanti.sup = sup_quant, quali.sup = sup_qual, scale.unit=TRUE, ncp=5, graph=F) 
+per.pca = PCA(df_per_PCA, quanti.sup = sup_quant, quali.sup = sup_qual, scale.unit=TRUE, ncp=5, graph=F) 
 ```
 
 Visualize PCA results
 
 ```{r}
-cai.pca$eig
-fviz_eig(cai.pca)
-fviz_eig(cai.pca, main = "Cairns scree plot", ncp = 4)
+per.pca$eig
+fviz_eig(per.pca)
+fviz_eig(per.pca, main = "Perth scree plot", ncp = 4)
 
-cai.pca$quanti.sup
-cai.p1 <- fviz_pca_var(cai.pca, repel = TRUE,
-             title = "Cairns - Variable plot"); cai.p1
-cai.pca$quali
-fviz_pca_ind(cai.pca, habillage = 17, addEllipses =TRUE, #rainToday
+per.pca$quanti.sup
+per.p1 <- fviz_pca_var(per.pca,repel = TRUE,
+             title = "Perth - Variable plot"); per.p1
+per.pca$quali
+fviz_pca_ind(per.pca, habillage = 17, addEllipses =TRUE, #rainToday
              ellipse.type = "confidence", palette = "jco", repel = TRUE) 
 #RainToday seems to form a well-clustered cloud of points towards the top left
 
-fviz_pca_ind(cai.pca, habillage = 18, addEllipses =TRUE, #rainTomorrow
+fviz_pca_ind(per.pca, habillage = 18, addEllipses =TRUE, #rainTomorrow
              ellipse.type = "confidence", palette = "jco", repel = TRUE, 
              alpha.ind = 0,
              label = "none", xlim = c(-2,2), ylim = c(-2,2))
 #RainTomorrow behaves similarily as RainToday: rainy days are clustered in the
 #humid and colder days.
 
-fviz_pca_ind(cai.pca, habillage = 6, addEllipses =TRUE, #winddir
+fviz_pca_ind(per.pca, habillage = 6, addEllipses =TRUE, #winddir
              ellipse.type = "confidence", repel = TRUE,  alpha.ind = 0,
              label = "none") +   xlim(-3, 2) + ylim (-2, 3)
 #The baricenters for WindDir3pm seem to point out that eastern-component winds
@@ -87,23 +87,23 @@ fviz_pca_ind(cai.pca, habillage = 6, addEllipses =TRUE, #winddir
 #is located in the west coast, so eastern winds come from the dry continental 
 #climate, while western winds will bring humidity and rain from the ocean.
 
-fviz_pca_ind(cai.pca, addEllipses =F, #Rainfall
-             col.ind = df_cai$Rainfall, repel = TRUE)+
-             scale_color_gradient2(low="white", mid="white", high="red")
+fviz_pca_ind(per.pca, addEllipses =F, #Rainfall
+             col.ind = df_per$Rainfall, repel = TRUE)+
+             scale_color_gradient2(low="white", mid="blue", high="red", midpoint=30)
 #Rainy days with average precipitations happen mostly in winter, spring and fall
 #while days with stronger precipitations have the potential to come in warmer &
 #drier days.
     
-cai.basic_plot <- fviz_pca_ind(cai.pca, label="none", addEllipses = T)
-cai.p2 <- ggplot(cbind(cai.basic_plot$data,df_cai[,c("Season","RainTomorrow")]),
+per.basic_plot <- fviz_pca_ind(per.pca, label="none", addEllipses = T)
+per.p2 <- ggplot(cbind(per.basic_plot$data,df_per[,c("Season","RainTomorrow")]),
 aes(x=x,y=y,col=Season,alpha=RainTomorrow, )) + geom_point() + theme_bw() +
-  scale_color_manual(values=c("#edae49", "#00798c")) +
+  scale_color_manual(values=c("#edae49", "#66a182", "#d1495b", "#00798c")) +
   scale_alpha_manual(values = c(0.2,0.9)) + 
   geom_hline(yintercept=0, linetype="dashed") + 
   geom_vline(xintercept=0, linetype="dashed") +
-  ggtitle("Cairns - Individuals plot") +
-  labs(x = paste0("Dim1 (", round(cai.pca$eig[1,3], digits = 1) ,"%)"),
-       y = paste0("Dim2 (", round(cai.pca$eig[2,3]-cai.pca$eig[1,3], digits = 1) ,"%)"))
+  ggtitle("Perth - Individuals plot") +
+  labs(x = paste0("Dim1 (", round(per.pca$eig[1,3], digits = 1) ,"%)"),
+       y = paste0("Dim2 (", round(per.pca$eig[2,3]-per.pca$eig[1,3], digits = 1) ,"%)"))
 #Seasons are perfectly spread along PC1, with summer days in the right side,
 #winter days in the left, and spring and fall are in the middle mixed together.
 #This separation perfectly recapitulates the climate type that Perth belongs to,
@@ -112,7 +112,7 @@ aes(x=x,y=y,col=Season,alpha=RainTomorrow, )) + geom_point() + theme_bw() +
 #a clear preference towards the left of the plane) from dry ones (in the bottom
 #half). 
 
-grid.arrange(cai.p1, cai.p2, ncol=2)
+grid.arrange(per.p1, per.p2, ncol=2)
 
 ```
 

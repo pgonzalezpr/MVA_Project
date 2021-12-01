@@ -1,0 +1,50 @@
+
+# MCA
+
+
+```{r}
+
+library(FactoMineR)
+library(factoextra)
+
+df_Cairns <- read.csv("Completed_Location_CSVs/df_Cairns_completed.csv")
+df_Brisbane <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv")
+df_Perth <- read.csv("Completed_Location_CSVs/df_Perth_completed.csv")
+
+```
+
+Subsetting features and applying MCA Analysis
+```{r}
+
+df_Cairns.active <- df_Cairns[, c("Month", "WindGustDir", "WindDir9am", "WindDir3pm", "RainToday", "RainTomorrow")]
+df_Brisbane.active <- df_Brisbane[, c("Month", "WindGustDir", "WindDir9am", "WindDir3pm", "RainToday", "RainTomorrow")]
+df_Perth.active <- df_Perth[, c("Month", "WindGustDir", "WindDir9am", "WindDir3pm", "RainToday", "RainTomorrow")]
+
+res.mca_Cairns <- MCA(df_Cairns.active, graph = FALSE)
+res.mca_Brisbane <- MCA(df_Brisbane.active, graph = FALSE)
+res.mca_Perth <- MCA(df_Perth.active, graph = FALSE)
+
+```
+
+
+# Results of MCA function (Visualization and interpretation)
+Eingenvalues and Variance:
+```{r}
+
+eig.val_Cairns <- get_eigenvalue(res.mca_Cairns)
+head(eig.val_Cairns, n=10)
+fviz_screeplot(res.mca_Cairns, addlabels = TRUE, ylim = c(0, 10))
+
+eig.val_Brisbane <- get_eigenvalue(res.mca_Brisbane)
+head(eig.val_Brisbane, n=10)
+fviz_screeplot(res.mca_Brisbane, addlabels = TRUE, ylim = c(0, 10))
+
+eig.val_Perth <- get_eigenvalue(res.mca_Perth)
+head(eig.val_Perth, n=10)
+fviz_screeplot(res.mca_Perth, addlabels = TRUE, ylim = c(0, 10))
+
+```
+
+The dimensions of the MCA results does not represent the variability of the model adequately. In order to make a good analysis, we should take the first dimensions that add up to at least an 80% of explained variance. In the graphics above we can see that with the first 10 dimensions we get less than the 30% of the variability.
+
+That is why we will not use this type of analysis and we will resort to techniques that use numerical variables such as PCA and MFA that perform a much more convenient analysis with better results.
