@@ -1,0 +1,133 @@
+---
+title: 'Group 1: Multivariate analysis of australian climate data'
+author: Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo Gonzalez, Mateo Jacome
+  Gonzalez y Pedro Gonzalez Prado - Clustering
+output:
+  html_document:
+    self_contained: false
+---
+
+
+```{r setup, message=FALSE, warning=FALSE, results=FALSE,include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# CLEARING ENVIRONMENT #
+rm(list=ls(all=TRUE))
+
+
+#INSTALL & LOAD LIBRARIES
+# Required packages
+pkgs<-c("cluster","colorspace","dplyr","factoextra","fpc","ggplot2","ggpubr","NbClust","patchwork","reshape2","stats","summarytools","tidyr","tidyverse","rstudioapi")
+
+# Non-installed packages
+inspkgs<-pkgs[!pkgs %in% installed.packages()]
+for(libs in inspkgs) install.packages(libs, repos = "http://cran.us.r-project.org")
+
+# Loading required
+sapply(pkgs,require,character=TRUE)
+```
+
+## Data input
+
+To perform the clustering analysis are used the original datasets (numeric variables) for Brisbane, Perth and Cairns.
+
+```{r pressure, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+# Loading dataset
+load('BrisbaneMFA.RData')
+dfBrisbane<-df
+dfMFABrisbane<-df_MFA
+#EigValMFABrisbane<-eig.val
+#groupMFABrisbane<-group
+#quali.varMFABrisbane<-quali.var
+#quanti.varMFABrisbane<-quanti.var
+resMFABrisbane<-get_mfa_ind(res.mfa)
+coordMFABrisbane<-data.frame(resMFABrisbane$coord)
+
+load('CairnsMFA.RData')
+dfCairns<-df
+dfMFACairns<-df_MFA
+resMFACairns<-get_mfa_ind(res.mfa)
+coordMFACairns<-data.frame(resMFACairns$coord)
+
+load('PerthMFA.RData')
+dfPerth<-df
+dfMFAPerth<-df_MFA
+resMFAPerth<-get_mfa_ind(res.mfa)
+coordMFAPerth<-data.frame(resMFAPerth$coord)
+
+originaldata<-list(dfMFABrisbane,dfMFAPerth,dfMFACairns)
+funum <- function(x){nums<-unlist(lapply(x, is.numeric))
+                     x[ , nums]}
+orNUMdata<-lapply(originaldata,funum)
+names(orNUMdata)<-c("Brisbane","Perth","Cairns")
+
+MFA<-list(coordMFABrisbane,coordMFAPerth,coordMFACairns)
+str(MFA)
+names(MFA)<-c("MFACoordsBrisbane","MFACoordsPerth","MFACoordsCairns")
+
+listall<-list(orNUMdata$Brisbane,MFA$MFACoordsBrisbane,orNUMdata$Perth,MFA$MFACoordsPerth,orNUMdata$Cairns,MFA$MFACoordsCairns)
+names(listall)<-c("Brisbane","MFACoordsBrisbane","Perth","MFACoordsPerth","Cairns","MFACoordsCairns")
+str(listall)
+
+set.seed(2021)
+```
+
+###  Clustering Analysis
+
+In order to analyze if data presents patterns of association are it is performed a clustering analysis. For this purpose, all incomplete cases remaining are removed and as a first step, the optimal number of clusters are estimated through direct methods: elbow, average silhouette and ASM to choose the most common value of optimal clusters.
+
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold", out.width="50%", results=FALSE}
+par(mar = c(4,4,.1,.1))
+fun01<-function(x){ tmp_df = listall[[x]]
+                    tmp_name = names(listall)[x]
+                    fviz_nbclust(tmp_df, kmeans, method = "wss") + 
+                    geom_vline(xintercept = 4, linetype = 2) + 
+                    labs(subtitle = paste("Elbow method",tmp_name))}
+fun02<-function(x){ tmp_df = listall[[x]]
+                    tmp_name = names(listall)[x]
+                    fviz_nbclust(tmp_df, kmeans, method = "silhouette") + 
+                    geom_vline(xintercept = 4, linetype = 2) + 
+                    labs(subtitle = paste("Elbow method",tmp_name))}
+fun03<-function(x){ tmp_df = listall[[x]]
+                    tmp_name = names(listall)[x]
+                    fviz_nbclust(tmp_df, kmeans, method = "gap_stat") +
+                    geom_vline(xintercept = 4, linetype = 2) + 
+                    labs(subtitle = paste("Elbow method",tmp_name))}
+
+wss<-lapply(1:length(listall),fun01)
+wss
+
+silhouette<-lapply(1:length(listall),fun02)
+silhouette
+
+#Gaps<-lapply(1:length(listall),fun03)
+#Gaps
+```
+Given the results provided by the methods, it can be concluded the clustering can be performed with 4 cluster for all the dataset, the original numerical variables and the coordinates of the performed MCA.
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold", out.width="50%", results=FALSE}
+funKm<- function(i){ tmp_df = listall[[i]];
+                     tmp_kmeans = kmeans(x = listall[[i]], centers = 4)
+                     tmp_name = names(listall)[i]
+                     tmp_df[,ncol(tmp_df) + 1] = tmp_kmeans$cluster
+                     colnames(tmp_df)[ncol(tmp_df)] = "KmeansCluster"
+                     return(tmp_df)}  
+
+Kmeans<-lapply(1:length(listall),funKm)
+Kmeans
+
+funVizKm<- function(i){ tmp_df = listall[[i]];
+                        tmp_kmeans = kmeans(x = listall[[i]], centers = 4)
+                        tmp_name = names(listall)[i]
+                        fviz_cluster(object = tmp_kmeans, data = listall[[i]], show.clust.cent = TRUE,
+                                                   ellipse.type = "euclid", star.plot = TRUE, repel = TRUE) + 
+                     theme_bw() + theme(legend.position = "none") + labs(title = 
+                                                                                  paste("Results clustering K-means - 4 clusters - ",
+                                                                                        tmp_name))}  
+
+VizKmeans<-lapply(1:length(listall),funVizKm) 
+VizKmeans
+
+```
+
