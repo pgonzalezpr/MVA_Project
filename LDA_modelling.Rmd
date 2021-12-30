@@ -1,0 +1,245 @@
+---
+title: "LDA_modelling"
+author: "Mateo Jácome"
+date: "29/12/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(caret)
+library(reshape2)
+library(knitr)
+library(dplyr)
+library(MVN)
+library(biotools)
+library(MASS)
+library(mda)
+library(klaR)
+library(car)
+
+# Load the data
+Ptrain <- read.csv("Train_Test_CSVs/df_Perth_train.csv", stringsAsFactors = T)
+Ptest <- read.csv("Train_Test_CSVs/df_Perth_test.csv", stringsAsFactors = T)
+Btrain <- read.csv("Train_Test_CSVs/df_Brisbane_train.csv", stringsAsFactors = T)
+Btest <- read.csv("Train_Test_CSVs/df_Brisbane_test.csv", stringsAsFactors = T)
+Ctrain <- read.csv("Train_Test_CSVs/df_Cairns_train.csv", stringsAsFactors = T)
+Ctest <- read.csv("Train_Test_CSVs/df_Cairns_test.csv", stringsAsFactors = T)
+
+Ptrain$Date <- as.Date(Ptrain$Date)
+Ptest$Date <- as.Date(Ptest$Date)
+Btrain$Date <- as.Date(Btrain$Date)
+Btest$Date <- as.Date(Btest$Date)
+Ctrain$Date <- as.Date(Ctrain$Date)
+Ctest$Date <- as.Date(Ctest$Date)
+```
+
+# Preprocessing and checking data
+Prior probabilities
+
+Testing Gaussian conditions with Shapiro-Wilk test for each variable
+
+```{r}
+names(Ctrain)
+datos_tidy <- melt(Ctrain, id.vars = c("Date","RainTomorrow"), measure.vars = c( "Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+                                                               "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
+                                                               "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
+                                                               "MaxTemp", "MinTemp", "Rainfall"),
+                   value.name = "value")
+
+kable(datos_tidy %>% group_by(RainTomorrow, variable) %>% summarise(p_value_Shapiro.test = round(shapiro.test(value)$p.value,5)))
+```
+
+Normality does not hold for most variables and combinations.
+
+```{r}
+# Covariance Conditions
+df_num <- Ctrain[,unlist(lapply(Ctrain, is.numeric))] 
+df_num <- cbind(Ctrain[,"RainTomorrow"],df_num)
+boxM(data = df_num[,-c(1,2,3,4)], grouping = df_num[,1])
+```
+
+We fail to reject Box' M-test's null hypothesis, for which it seems that our data has equal covariance.
+
+
+##Step 2. Calculating LDA function
+
+First we scale (or not, it's optional). The thing is that if we scale it's harder to interpret on the spot. Its our decision. In this case we're escaling the data.
+
+the preProcess() model scales only numerical features in a db. In the following link there's some other ways to normalize data that's not scaling.
+
+https://cran.r-project.org/web/packages/bestNormalize/vignettes/bestNormalize.html
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Ctrain %>%preProcess(method = c("center", "scale"))
+# Transform the data using the estimated parameters
+train.transformed <- preproc.param %>% predict(Ctrain)
+test.transformed <- preproc.param %>% predict(Ctest)
+```
+
+Now, build the model
+
+
+```{r}
+###LDA
+modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+                                                               "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
+                                                               "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
+                                                               "MaxTemp", "MinTemp", "Rainfall", "Season")
+
+model <- lda(RainTomorrow~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
+model
+plot(model)
+```
+
+```{r}
+predictions <- model %>% predict(test.transformed)
+names(predictions)
+predictions$class
+predictions$posterior
+predictions$x
+### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+```
+
+```{r}
+mean(predictions$class==test.transformed$RainTomorrow)
+table(test.transformed$RainTomorrow, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$RainTomorrow != predictions$class) * 100;Error
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MODEL AGAIN WITH PCA DATA
+
+
+```{r}
+# Load the data
+Ptrain <- read.csv("PCA_data_CSVs/df_Perth_PCA_train.csv", stringsAsFactors = T)
+Ptest <- read.csv("PCA_data_CSVs/df_Perth_PCA_test.csv", stringsAsFactors = T)
+
+
+Ptrain$Date <- as.Date(Ptrain$Date)
+Ptest$Date <- as.Date(Ptest$Date)
+
+```
+
+# Preprocessing and checking data
+Prior probabilities
+
+Testing Gaussian conditions with Shapiro-Wilk test for each variable
+
+```{r}
+names(Ptrain)
+datos_tidy <- melt(Ptrain, id.vars = c("Date","Target"), measure.vars = c( "Dim.1", "Dim.2", "Dim.3", "Dim.4", "Dim.5"),
+                   value.name = "value")
+
+kable(datos_tidy %>% group_by(Target, variable) %>% summarise(p_value_Shapiro.test = round(shapiro.test(value)$p.value,5)))
+```
+
+Normality does not hold for most variables and combinations.
+
+```{r}
+# Covariance Conditions
+df_num <- Ptrain[,unlist(lapply(Ptrain, is.numeric))] 
+df_num <- cbind(Ptrain[,"Target"],df_num)
+boxM(data = df_num[,-c(1)], grouping = df_num[,1])
+```
+
+We fail to reject Box' M-test's null hypothesis, for which it seems that our data has equal covariance.
+
+
+##Step 2. Calculating LDA function
+
+First we scale (or not, it's optional). The thing is that if we scale it's harder to interpret on the spot. Its our decision. In this case we're escaling the data.
+
+the preProcess() model scales only numerical features in a db. In the following link there's some other ways to normalize data that's not scaling.
+
+https://cran.r-project.org/web/packages/bestNormalize/vignettes/bestNormalize.html
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Ptrain %>%preProcess(method = c("center", "scale"))
+# Transform the data using the estimated parameters
+train.transformed <- preproc.param %>% predict(Ptrain)
+test.transformed <- preproc.param %>% predict(Ptest)
+```
+
+Now, build the model
+
+
+```{r}
+###LDA
+modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+                                                               "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
+                                                               "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
+                                                               "MaxTemp", "MinTemp", "Rainfall", "Season")
+
+model <- lda(Target~ . - Date, data = train.transformed)
+model
+plot(model)
+```
+_The lda() outputs contain the following elements:_
+_- Prior probabilities of groups: the proportion of training observations in each group._
+_- Group means: group center of gravity. Shows the mean of each variable in each group._
+_Coefficients of linear discriminants: Shows the linear combination of predictor variables that are used to form the LDA decision rule._
+
+We can see that discriminant 1 is 99% of the weight, so it explains almost all the informaiton. The values for each features represents the importance of the feature in the analysis. So se see that petal length and width are the most important (their abs() value is bigger).
+
+So, this is the model. We should be cautious becausae the conditions were not met though!!
+
+```{r}
+predictions <- model %>% predict(test.transformed)
+names(predictions)
+predictions$class
+predictions$posterior
+predictions$x
+### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+```
+
+```{r}
+mean(predictions$class==test.transformed$Target)
+table(test.transformed$Target, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$Target != predictions$class) * 100;Error
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

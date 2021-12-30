@@ -116,3 +116,16 @@ grid.arrange(per.p1, per.p2, ncol=2)
 
 ```
 
+
+```{r}
+df_perPCA<- cbind(Date = df_per$Date, Target = df_per$RainTomorrow, Season = df_per$Season, as.data.frame(per.pca$ind$coord))
+
+train_dfP <- subset(df_perPCA, Date <= "2012-05-31")
+test_dfP <- subset(df_perPCA, Date > "2012-05-31")
+
+write.csv(train_dfP,'PCA_data_CSVs/df_Perth_PCA_train.csv', row.names = FALSE)
+write.csv(test_dfP,'PCA_data_CSVs/df_Perth_PCA_test.csv', row.names = FALSE)
+
+```
+
+

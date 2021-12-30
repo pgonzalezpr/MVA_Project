@@ -76,4 +76,31 @@ nrow(train_dfC)/nrow(dfC)*100
 nrow(test_dfC)/nrow(dfC)*100
 ```
 
+```{r}
+summary(train_dfP)
+summary(test_dfP)
+
+prop.table(table(train_dfP$RainToday))
+prop.table(table(test_dfP$RainToday))
+```
+
+
+
+
+```{r}
+#write dfs to csv
+
+write.csv(train_dfC,'Train_Test_CSVs/df_Cairns_train.csv', row.names = FALSE)
+write.csv(test_dfC,'Train_Test_CSVs/df_Cairns_test.csv', row.names = FALSE)
+
+write.csv(train_dfB,'Train_Test_CSVs/df_Brisbane_train.csv', row.names = FALSE)
+write.csv(test_dfB,'Train_Test_CSVs/df_Brisbane_test.csv', row.names = FALSE)
+
+write.csv(train_dfP,'Train_Test_CSVs/df_Perth_train.csv', row.names = FALSE)
+write.csv(test_dfP,'Train_Test_CSVs/df_Perth_test.csv', row.names = FALSE)
+
+
+```
+
+
 
