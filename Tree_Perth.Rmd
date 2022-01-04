@@ -227,5 +227,16 @@ pred_test2 <- predict(tree2, test2, type = 'class') # using test data
 confusionMatrix(pred_test2, test2$RainTomorrow, positive="Yes")
 ```
 
+# Prediction with probabilities
 
+We are able to slightly increase the accuracy of the model by using a different probability rule. We predict there will be rain if the chance of rain is more than 30%. The default used by the "class" predictor is 50%.
+
+```{r}
+#Test Set Evaluation with probabilities
+#Confusion matrix-test
+pred_test2_prob <- predict(tree2, test2, type = 'prob') # using test data
+# predict rain if chance of rain is more than 30% (default is 50%)
+pred_test2_prob30 <- ifelse(pred_test2_prob[,2]>0.3,"Yes","No") 
+confusionMatrix(data= as.factor(pred_test2_prob30), test2$RainTomorrow, positive="Yes")
+```
 
