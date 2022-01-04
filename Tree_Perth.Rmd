@@ -2,7 +2,9 @@
 title: "Classification Tree - Perth"
 author: "Kathryn Weissman"
 date: "1/4/2022"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r clean workspace, echo=FALSE}
@@ -22,11 +24,8 @@ library(rpart)
 library(rpart.plot)
 library(mlbench)
 library(caret)
-library(pROC)
 library(tree)
-library(C50)
-library(printr)
-library(randomForest)
+library(performanceEstimation)
 ```
 
 ```{r}
@@ -240,3 +239,76 @@ pred_test2_prob30 <- ifelse(pred_test2_prob[,2]>0.3,"Yes","No")
 confusionMatrix(data= as.factor(pred_test2_prob30), test2$RainTomorrow, positive="Yes")
 ```
 
+### SMOTE algorithm for unbalanced classification problems
+
+From the library {performanceEstimation}
+This is not reproducable. Every time this chunk is run, a new balanced.data is created.
+
+```{r}
+print("Training Data: Count of Rain Tomorrow")
+(table(train2$RainTomorrow))
+balanced.data <- smote(RainTomorrow ~., train2, perc.over = 2, k = 5, perc.under = 2)
+print("Balanced Training Data: Count of Rain Tomorrow")
+(table(balanced.data$RainTomorrow))
+```
+
+```{r}
+# Best strategy for tree fitting, cp = 0
+treeBalFit2 <- rpart(RainTomorrow ~., data = balanced.data, method = "class", cp = 0) 
+printcp(treeBalFit2)
+plotcp(treeBalFit2)
+rpart.plot(treeBalFit2)
+```
+```{r}
+xerror <- treeBalFit2$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+treeBalFit2$cptable[imin.xerror, ]
+upper.xerror <- xerror[imin.xerror] + treeBalFit2$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- treeBalFit2$cptable[icp, "CP"]
+```
+
+```{r}
+treeBal2 <- prune(treeBalFit2, cp = cp)
+rpart.plot(treeBal2)
+```
+
+```{r}
+#Classification Rules
+rpart.rules(treeBal2, style = "tall")
+```
+
+
+```{r}
+#Checking important variables
+importanceBal2 <- tree2$variable.importance 
+importanceBal2 <- round(100*importanceBal2/sum(importanceBal2), 1)
+importanceBal2[importanceBal2 >= 1]
+```
+
+```{r}
+#Train Set Evaluation
+#Confusion matrix-train
+pred_trainBal2 <- predict(treeBal2, train2, type = 'class') # using unbalanced train data
+#Make sure to state positive class in the confusion matrix.
+confusionMatrix(pred_trainBal2, train2$RainTomorrow, positive="Yes")
+```
+```{r}
+#Test Set Evaluation
+#Confusion matrix-test
+pred_testBal2 <- predict(treeBal2, test2, type = 'class') # using test data
+confusionMatrix(pred_testBal2, test2$RainTomorrow, positive="Yes")
+```
+
+# Prediction with probabilities using Tree created from balanced data
+
+We are able to slightly improve the balanced accuracy and sensitivity of the model by using a different probability rule, however Accuracy and Specificity decrease. We predict there will be rain if the chance of rain is more than 20%. The default used by the "class" predictor is 50%.
+
+```{r}
+#Test Set Evaluation with probabilities
+#Confusion matrix-test
+pred_testBal2_prob <- predict(treeBal2, test2, type = 'prob') # using test data
+# predict rain if chance of rain is more than 20% (default is 50%)
+pred_testBal2_prob20 <- ifelse(pred_testBal2_prob[,2]>0.2,"Yes","No") 
+confusionMatrix(data= as.factor(pred_testBal2_prob20), test2$RainTomorrow, positive="Yes")
+```
