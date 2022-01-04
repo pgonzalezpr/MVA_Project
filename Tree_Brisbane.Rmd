@@ -98,7 +98,7 @@ modeling_vars1 <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am",
 modeling_vars2 <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am",
                    "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Pressure9am",
                    "Pressure3pm",  "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm",
-                   "TempRange", "MaxTemp", "MinTemp", "Rainfall", "Season", 
+                   "TempRange", "MaxTemp", "MinTemp","RainToday", "Rainfall", "Season", 
                    "RainTomorrow")
 
 train1 <- Btrain[,modeling_vars1]
@@ -108,18 +108,44 @@ train2 <- Btrain[,modeling_vars2]
 test2 <- Btest[,modeling_vars2]
 ```
 
-### Using Fitting & Pruning Strategy shown in Lab
-#### First Set of Variables
+### SMOTE algorithm for unbalanced classification problems
 
+From the library {performanceEstimation}
+This is not able to be reproduced. Every time this chunk is run, a new dataset is created, even with the rando seed set. Balanced Training Sets 1 and 2 could have different observations due to the nearest neighbors used with the variable subset.
 
 ```{r}
-# Best strategy for tree fitting, cp = 0
+print("Training Data: Count of Rain Tomorrow")
+(table(Btrain$RainTomorrow))
+trainBal1 <- smote(RainTomorrow ~., train1, perc.over = 2, k = 5, perc.under = 2)
+print("Balanced Training 1 Data: Count of Rain Tomorrow")
+(table(trainBal1$RainTomorrow))
+trainBal2 <- smote(RainTomorrow ~., train2, perc.over = 2, k = 5, perc.under = 2)
+print("Balanced Training 2 Data: Count of Rain Tomorrow")
+(table(trainBal2$RainTomorrow))
+```
+
+```{r}
+print("Balanced Training 1 Data: Percentage of Days in each Season")
+round(prop.table(table(trainBal1$Season))*100,1)
+print("Balanced Training 2 Data: Percentage of Days in each Season")
+round(prop.table(table(trainBal2$Season))*100,1)
+
+```
+
+### Using Fitting & Pruning Strategy shown in Lab
+
+#### First Set of Variables on Unbalanced Data
+
+```{r}
+# Best strategy for tree fitting, start with cp = 0, then prune.
 treeFit1 <- rpart(RainTomorrow ~., data = train1, method = "class", cp = 0) 
 printcp(treeFit1)
 plotcp(treeFit1)
 rpart.plot(treeFit1)
 ```
+
 ```{r}
+# Find the cp with lowest error, then prune.
 xerror <- treeFit1$cptable[,"xerror"]
 imin.xerror <- which.min(xerror)
 treeFit1$cptable[imin.xerror, ]
@@ -128,7 +154,10 @@ icp <- min(which(xerror <= upper.xerror))
 cp <- treeFit1$cptable[icp, "CP"]
 ```
 
+The pruned tree produced is extremely simple, and only uses one variable, Humidity3pm.
+
 ```{r}
+# prune using cp
 tree1 <- prune(treeFit1, cp = cp)
 rpart.plot(tree1)
 ```
@@ -145,7 +174,7 @@ importance1 <- round(100*importance1/sum(importance1), 1)
 importance1[importance1 >= 1]
 ```
 
-### Confusion Matrix
+##### Confusion Matrix
 
 Help for Confusion Matrix: <https://towardsdatascience.com/understanding-confusion-matrix-a9ad42dcfd62>
 
@@ -153,6 +182,7 @@ Recall,Precision and Accuracy should be high as possible
 
 Balanced Accuracy represents area under ROC.
 
+The sensitivity is very low, which is how well the model predicts it will rain on a rainy day. Since the data is imbalanced, we should try using SMOTE sampling for the training data to see if it improves the performance of the model.
 
 ```{r}
 #Evaluation
@@ -162,18 +192,91 @@ pred_train1 <- predict(tree1, train1, type = 'class') # using train data
 confusionMatrix(pred_train1, train1$RainTomorrow, positive="Yes")
 ```
 
-The sensitivity is very low, which is how accurate the predictions are for rainy days. Since the data is imbalanced, we should try using SMOTE sampling for the training data to see if it improves the performance of the model.
+#### First Set of Variables on Balnced Training Data using SMOTE
 
 ```{r}
-#Test Evaluation
+# Best strategy for tree fitting, start with cp = 0, then prune.
+treeFitBal1 <- rpart(RainTomorrow ~., data = trainBal1, method = "class", cp = 0) 
+printcp(treeFitBal1)
+plotcp(treeFitBal1)
+rpart.plot(treeFitBal1)
+```
+```{r}
+# Find the cp with lowest error, then prune.
+xerror <- treeFitBal1$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+treeFitBal1$cptable[imin.xerror, ]
+upper.xerror <- xerror[imin.xerror] + treeFitBal1$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- treeFitBal1$cptable[icp, "CP"]
+```
+
+The pruned tree using the balanced data is much more complex than the tree produced using imbalanced data.
+
+```{r}
+# prune using cp
+treeBal1 <- prune(treeFitBal1, cp = cp)
+rpart.plot(treeBal1)
+```
+
+```{r}
+#Classification Rules
+rpart.rules(treeBal1, style = "tall")
+```
+In the Imbalanced Training Data for the first set of variables, Humidity3pm, Humidity9am, Sunshine, TempRange, Cloud3pm, and Cloud9am  were the only variables with important greater than 1%.
+
+```{r}
+#Checking important variables
+importanceBal1 <- treeBal1$variable.importance 
+importanceBal1 <- round(100*importanceBal1/sum(importanceBal1), 1)
+importanceBal1[importanceBal1 >= 1]
+```
+
+Using the model created by balancing the data produces better results when checking predictions for the training data. Accuracy improved from 82.8% to 85.32%. Sensitivity improved from 59.7% to 77.9%. Specificity decreased from 90.9% to 87.9%. Balanced Accuracy (Area under ROC) improved from 75.3% to 82.9%
+
+```{r}
+#Evaluation of model created with balanced data
+#Confusion matrix-train
+pred_trainBal1 <- predict(treeBal1, train1, type = 'class') # using original train data
+#Make sure to state positive class in the confusion matrix.
+confusionMatrix(pred_trainBal1, train1$RainTomorrow, positive="Yes")
+```
+
+The default probability threshold is 50% for classification. We can use trial and error to determine if a different probability threshold improves results.
+
+Using a probability threshold of 25%, all of our key metrics get above 80% on our training data. Accuracy is 84.14%, Sensitivity is 81.2%, Specificity is 85.2%, and Balanced Accuracy is 83.2%.
+
+When the tree produces a probability of greater than 25% chance of rain tomorrow, we will predict that Yes it will rain.
+
+This is the model we will use for our test set.
+
+```{r}
+#Train Set Evaluation of Balanced Model with probabilities
+#Confusion matrix-train
+pred_trainBal1_prob <- predict(treeBal1, train1, type = 'prob') # using imbalanced training data
+# predict rain if chance of rain is more than 25% (default is 50%)
+pred_trainBal1_prob25 <- ifelse(pred_trainBal1_prob[,2]>0.25,"Yes","No") 
+confusionMatrix(data= as.factor(pred_trainBal1_prob25), train1$RainTomorrow, positive="Yes")
+```
+
+Our key metrics decrease when expanded to the test set, which could be an indicator of overfitting to the training data.
+
+Using a probability threshold of 25% on the test data: Accuracy is 76%, Sensitivity is 73.8%, Specificity is 76.6%, and Balanced Accuracy is 75.2%.
+
+```{r}
+#Test Set Evaluation of Balanced Model with probabilities
 #Confusion matrix-test
-pred_test1 <- predict(tree1, test1, type = 'class') # using test data
-confusionMatrix(pred_test1, test1$RainTomorrow, positive="Yes")
+pred_testBal1_prob <- predict(treeBal1, test1, type = 'prob') # using testing data
+# predict rain if chance of rain is more than 25% (default is 50%)
+pred_testBal1_prob25 <- ifelse(pred_testBal1_prob[,2]>0.25,"Yes","No") 
+confusionMatrix(data= as.factor(pred_testBal1_prob25), test1$RainTomorrow, positive="Yes")
 ```
 
 #### Second Set of Variables
 
 This set includes more variables than the first set.
+Set 1 included "RainToday", but set 2 also includes "Rainfall". 
+Set 1 included "TempRange", but set 2 includes all temperature related varaiables including TempRange.
 
 ```{r}
 # Best strategy for tree fitting, cp = 0
@@ -182,6 +285,7 @@ printcp(treeFit2)
 plotcp(treeFit2)
 rpart.plot(treeFit2)
 ```
+
 ```{r}
 xerror <- treeFit2$cptable[,"xerror"]
 imin.xerror <- which.min(xerror)
@@ -191,7 +295,7 @@ icp <- min(which(xerror <= upper.xerror))
 cp <- treeFit2$cptable[icp, "CP"]
 ```
 
-After pruning, the trees using both sets of variables are the identical for Brisbane.
+After pruning, the trees for both sets of variables are the identical for Brisbane, and they only use the Humidity3pm variable to make a prediction.
 
 ```{r}
 tree2 <- prune(treeFit2, cp = cp)
@@ -202,6 +306,7 @@ rpart.plot(tree2)
 rpart.rules(tree2, style = "tall")
 ```
 
+The important variables are the same for tree1 and tree2, even though some different variables were added to the second training set. Humidity3pm is the most important.
 
 ```{r}
 #Checking important variables
@@ -210,55 +315,17 @@ importance2 <- round(100*importance2/sum(importance2), 1)
 importance2[importance2 >= 1]
 ```
 
+#### Second Set of Variables on Balnced Training Data using SMOTE
 
-```{r}
-#Train Set Evaluation
-#Confusion matrix-train
-pred_train2 <- predict(tree2, train2, type = 'class') # using train data
-#Make sure to state positive class in the confusion matrix.
-confusionMatrix(pred_train2, train2$RainTomorrow, positive="Yes")
-```
-
-```{r}
-#Test Set Evaluation
-#Confusion matrix-test
-pred_test2 <- predict(tree2, test2, type = 'class') # using test data
-confusionMatrix(pred_test2, test2$RainTomorrow, positive="Yes")
-```
-
-# Prediction with probabilities
-
-The model improves by lowering the probability threshold to 20%
-
-```{r}
-#Test Set Evaluation with probabilities
-#Confusion matrix-test
-pred_test2_prob <- predict(tree2, test2, type = 'prob') # using test data
-# predict rain if chance of rain is more than 20% (default is 50%)
-pred_test2_prob20 <- ifelse(pred_test2_prob[,2]>0.2,"Yes","No") 
-confusionMatrix(data= as.factor(pred_test2_prob20), test2$RainTomorrow, positive="Yes")
-```
-
-### SMOTE algorithm for unbalanced classification problems
-
-From the library {performanceEstimation}
-This is not reproducable. Every time this chunk is run, a new balanced.data is created.
-
-```{r}
-print("Training Data: Count of Rain Tomorrow")
-(table(train2$RainTomorrow))
-balanced.data <- smote(RainTomorrow ~., train2, perc.over = 2, k = 5, perc.under = 2)
-print("Balanced Training Data: Count of Rain Tomorrow")
-(table(balanced.data$RainTomorrow))
-```
 
 ```{r}
 # Best strategy for tree fitting, cp = 0
-treeBalFit2 <- rpart(RainTomorrow ~., data = balanced.data, method = "class", cp = 0) 
+treeBalFit2 <- rpart(RainTomorrow ~., data = trainBal2, method = "class", cp = 0) 
 printcp(treeBalFit2)
 plotcp(treeBalFit2)
 rpart.plot(treeBalFit2)
 ```
+
 ```{r}
 xerror <- treeBalFit2$cptable[,"xerror"]
 imin.xerror <- which.min(xerror)
@@ -277,49 +344,45 @@ rpart.plot(treeBal2)
 #Classification Rules
 rpart.rules(treeBal2, style = "tall")
 ```
-
+The tree using balanced training data with the second set of variables identified more variables with importance greater than 1%, however the 5 most important variables are in common between both sets of variables.
 
 ```{r}
 #Checking important variables
-importanceBal2 <- tree2$variable.importance 
+importanceBal2 <- treeBal2$variable.importance 
 importanceBal2 <- round(100*importanceBal2/sum(importanceBal2), 1)
 importanceBal2[importanceBal2 >= 1]
 ```
 
+The model using the second set of variables performs slightly better than the model created with the first set. This indicates that the rpart algorithm did a good job of choosing the important variables to use in the model.
+
 ```{r}
-#Train Set Evaluation
+#Evaluation of second model using Training Set
 #Confusion matrix-train
 pred_trainBal2 <- predict(treeBal2, train2, type = 'class') # using unbalanced train data
 #Make sure to state positive class in the confusion matrix.
 confusionMatrix(pred_trainBal2, train2$RainTomorrow, positive="Yes")
 ```
 
+There is less of a difference when changing the probability threshold one the second set of variables than on the first set.
+
+We get closer to the 80% threshold with sensitivity when we change the probability threshold from 50% to 30% to predict rain.
+
 ```{r}
 #Train Set Evaluation with probabilities
 #Confusion matrix-train
 pred_trainBal2_prob <- predict(treeBal2, train2, type = 'prob') # using train data
-# predict rain if chance of rain is more than 75% (default is 50%)
-pred_trainBal2_prob75 <- ifelse(pred_trainBal2_prob[,2]>0.5,"Yes","No") 
-confusionMatrix(data= as.factor(pred_trainBal2_prob75), train2$RainTomorrow, positive="Yes")
-```
-```{r}
-#Test Set Evaluation
-#Confusion matrix-test
-pred_testBal2 <- predict(treeBal2, test2, type = 'class') # using test data
-confusionMatrix(pred_testBal2, test2$RainTomorrow, positive="Yes")
+# predict rain if chance of rain is more than 30% (default is 50%)
+pred_trainBal2_prob30 <- ifelse(pred_trainBal2_prob[,2]>0.3,"Yes","No") 
+confusionMatrix(data= as.factor(pred_trainBal2_prob30), train2$RainTomorrow, positive="Yes")
 ```
 
-# Prediction with probabilities using Tree created from balanced data
-
-We are able to slightly improve the accuracy and specificity of the model by using a different probability rule, however sensitivity decreases. We predict there will be rain if the chance of rain is more than 75%. The default used by the "class" predictor is 50%.
-
-
+Both balanced models with the two different sets of variables performed similarly when evaluated with the test data set. Accuracy is close to 77% and Balanced Accuracy is between 76% and 77%. The sensitivity of the first model was better, with 76% compared to the second model's 74%, but the specificity was better with the second model.
 
 ```{r}
 #Test Set Evaluation with probabilities
 #Confusion matrix-test
 pred_testBal2_prob <- predict(treeBal2, test2, type = 'prob') # using test data
-# predict rain if chance of rain is more than 75% (default is 50%)
-pred_testBal2_prob75 <- ifelse(pred_testBal2_prob[,2]>0.75,"Yes","No") 
+# predict rain if chance of rain is more than 30% (default is 50%)
+pred_testBal2_prob75 <- ifelse(pred_testBal2_prob[,2]>0.3,"Yes","No") 
 confusionMatrix(data= as.factor(pred_testBal2_prob75), test2$RainTomorrow, positive="Yes")
 ```
