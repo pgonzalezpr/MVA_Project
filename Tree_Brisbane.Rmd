@@ -97,12 +97,13 @@ modeling_vars1 <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am",
                    "Pressure3pm", "Cloud9am", "Cloud3pm", "TempRange", 
                    "RainToday", "Season", "RainTomorrow")
 
-# Set 2 includes all temperature variables and "Rainfall" instead of "RainToday"
+# Set 2 includes all temperature variables and "Rainfall" in addition to "RainToday"
 modeling_vars2 <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am",
                    "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Pressure9am",
                    "Pressure3pm",  "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm",
                    "TempRange", "MaxTemp", "MinTemp","RainToday", "Rainfall", "Season", 
                    "RainTomorrow")
+
 
 train1 <- Btrain[,modeling_vars1]
 test1 <- Btest[,modeling_vars1]
