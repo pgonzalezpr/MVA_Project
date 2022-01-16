@@ -293,7 +293,7 @@ confusionMatrix(pred_testBal1, test1$RainTomorrow, positive="Yes")
 
 This set includes more variables than the first set.
 Set 1 included "RainToday", but set 2 also includes "Rainfall". 
-Set 1 included "TempRange", but set 2 includes all temperature related varaiables including TempRange.
+Set 1 included "TempRange", but set 2 includes all temperature related variables including TempRange.
 
 ```{r}
 # Best strategy for tree fitting, cp = 0
