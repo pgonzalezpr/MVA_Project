@@ -1,0 +1,38 @@
+---
+title: "ClusterProfiling"
+author: "Pedro Gonzalez Prado"
+date: "1/15/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls(all=TRUE))
+library(readr)
+library(FactoMineR)
+```
+
+```{r}
+df <- read.csv("BrisbaneClusters.csv",sep=",",stringsAsFactors = T)
+df$KmeansDF <- as.factor(df$KmeansDF)
+```
+
+
+```{r}
+
+```
+
+Profile with subset(feature, Kmeans column)
+Statistical tests
+Plots by cluster
+
+Brisbane: Temp range, cloud9am, cloud3pm, humidity9am, minTemp
+Perth: windSpeed3pm, maxTemp, TempRamge, Temp9am, Temp3pm, Cloud9am, huimidity9am, humidity3pm
+
+
+
+```{r}
+catdes(df[,c(2:23,25)],23)
+```
+
+
