@@ -4,6 +4,7 @@ author:  "Andrea Iglesias Munilla, Kathryn Weissman, Diana Galindo González, Ma
 date: "`r Sys.Date()`"
 output:
   html_notebook:
+   
    toc: true
    toc_depth: 2
    toc_float: true
@@ -12,10 +13,11 @@ output:
    #collapsed: false
    #smooth_scroll: false
    number_sections: true
-   
 #theme: readable
 #highlight: success #https://bootswatch.com/3/
 #subtitle: Report
+editor_options: 
+  chunk_output_type: inline
 ---
 ```{r setup, include=FALSE, results='hide'}
 rm(list=ls(all=TRUE))
