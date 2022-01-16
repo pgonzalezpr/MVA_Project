@@ -42,8 +42,8 @@ Prior probabilities
 Testing Gaussian conditions with Shapiro-Wilk test for each variable
 
 ```{r}
-names(Ctrain)
-datos_tidy <- melt(Ctrain, id.vars = c("Date","RainTomorrow"), measure.vars = c( "Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+names(Ptrain)
+datos_tidy <- melt(Ptrain, id.vars = c("Date","RainTomorrow"), measure.vars = c( "Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
                                                                "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
                                                                "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
                                                                "MaxTemp", "MinTemp", "Rainfall"),
@@ -56,8 +56,8 @@ Normality does not hold for most variables and combinations.
 
 ```{r}
 # Covariance Conditions
-df_num <- Ctrain[,unlist(lapply(Ctrain, is.numeric))] 
-df_num <- cbind(Ctrain[,"RainTomorrow"],df_num)
+df_num <- Ptrain[,unlist(lapply(Ptrain, is.numeric))] 
+df_num <- cbind(Ptrain[,"RainTomorrow"],df_num)
 boxM(data = df_num[,-c(1,2,3,4)], grouping = df_num[,1])
 ```
 
@@ -74,10 +74,10 @@ https://cran.r-project.org/web/packages/bestNormalize/vignettes/bestNormalize.ht
 
 ```{r}
 # Estimate preprocessing parameters
-preproc.param <- Ctrain %>%preProcess(method = c("center", "scale"))
+preproc.param <- Ptrain %>%preProcess(method = c("center", "scale"))
 # Transform the data using the estimated parameters
-train.transformed <- preproc.param %>% predict(Ctrain)
-test.transformed <- preproc.param %>% predict(Ctest)
+train.transformed <- preproc.param %>% predict(Ptrain)
+test.transformed <- preproc.param %>% predict(Ptest)
 ```
 
 Now, build the model
@@ -90,33 +90,125 @@ modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "
                                                                "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
                                                                "MaxTemp", "MinTemp", "Rainfall", "Season")
 
-model <- lda(RainTomorrow~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
+model <- lda(accuRain~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
 model
 plot(model)
 ```
 
 ```{r}
-predictions <- model %>% predict(test.transformed)
+predictions <- model %>% predict(test.transformed, )
 names(predictions)
 predictions$class
+predictions$classBin <- as.factor(ifelse(predictions$class %in% c('NoRain','Mist'), 'No','Yes' ) )
 predictions$posterior
 predictions$x
 ### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
 ```
 
 ```{r}
-mean(predictions$class==test.transformed$RainTomorrow)
-table(test.transformed$RainTomorrow, predictions$class, dnn = c("Actual Class", "Predicted Class"))
-Error <- mean(test.transformed$RainTomorrow != predictions$class) * 100;Error
+mean(predictions$class==test.transformed$accuRain)
+table(test.transformed$accuRain, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$accuRain != predictions$class) * 100;Error
+
+
+
+
+confusionMatrix(predictions$class, test.transformed$accuRain, positive = "Yes")
+confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
 ```
 
 
 
 
+#Cairns
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Ctrain %>%preProcess(method = c("center", "scale"))
+# Transform the data using the estimated parameters
+train.transformed <- preproc.param %>% predict(Ctrain)
+test.transformed <- preproc.param %>% predict(Ctest)
+```
+
+```{r}
+###LDA
+modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+                                                               "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
+                                                               "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
+                                                               "MaxTemp", "MinTemp", "Rainfall", "Season")
+
+model <- lda(accuRain~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
+model
+plot(model)
+```
+
+```{r}
+predictions <- model %>% predict(test.transformed, )
+names(predictions)
+predictions$class
+predictions$classBin <- as.factor(ifelse(predictions$class %in% c('NoRain','Mist'), 'No','Yes' ) )
+predictions$posterior
+predictions$x
+### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+```
+
+```{r}
+mean(predictions$class==test.transformed$accuRain)
+table(test.transformed$accuRain, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$accuRain != predictions$class) * 100;Error
 
 
 
 
+confusionMatrix(predictions$class, test.transformed$accuRain, positive = "Yes")
+confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
+```
+
+
+
+#Brisbane
+
+```{r}
+# Estimate preprocessing parameters
+preproc.param <- Btrain %>%preProcess(method = c("center", "scale"))
+# Transform the data using the estimated parameters
+train.transformed <- preproc.param %>% predict(Btrain)
+test.transformed <- preproc.param %>% predict(Btest)
+```
+
+```{r}
+###LDA
+modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+                                                               "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
+                                                               "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
+                                                               "MaxTemp", "MinTemp", "Rainfall", "Season")
+
+model <- lda(accuRain~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
+model
+plot(model)
+```
+
+```{r}
+predictions <- model %>% predict(test.transformed, )
+names(predictions)
+predictions$class
+predictions$classBin <- as.factor(ifelse(predictions$class %in% c('NoRain','Mist'), 'No','Yes' ) )
+predictions$posterior
+predictions$x
+### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+```
+
+```{r}
+mean(predictions$class==test.transformed$accuRain)
+table(test.transformed$accuRain, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$accuRain != predictions$class) * 100;Error
+
+
+
+
+confusionMatrix(predictions$class, test.transformed$accuRain, positive = "Yes")
+confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
+```
 
 
 
@@ -194,10 +286,6 @@ Now, build the model
 
 ```{r}
 ###LDA
-modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
-                                                               "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
-                                                               "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
-                                                               "MaxTemp", "MinTemp", "Rainfall", "Season")
 
 model <- lda(Target~ . - Date, data = train.transformed)
 model

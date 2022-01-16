@@ -1,0 +1,393 @@
+---
+title: "Association Rules"
+authors: "Group 1"
+
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r message=FALSE, warning=FALSE}
+
+# Clear plots
+if(!is.null(dev.list())) dev.off()
+
+# Clean workspace
+rm(list=ls())
+
+# Introduce required packages:
+library(stringr)
+library(dplyr)
+library(arules)
+library(arulesViz)
+library(datasets)
+library("FactoMineR")
+library("factoextra")
+library("arules")
+
+requiredPackages <- c("stringr","dplyr","arules","arulesViz","datasets",
+                      "FactoMineR","factoextra","arules")
+
+#use this function to check if each package is on the local machine
+#if a package is installed, it will be loaded
+#if any are not, the missing package(s) will be installed and loaded
+package.check <- lapply(requiredPackages, FUN = function(x) {
+  if (!require(x, character.only = TRUE)) {
+    #install.packages(x, dependencies = TRUE)
+    library(x, character.only = TRUE)
+  }
+})
+
+```
+
+# Read the datasets
+
+```{r}
+
+df_Brisbane <- read.table("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/Completed_Location_CSVs/df_Brisbane_completed.csv", header=T, sep=",", stringsAsFactors = T)
+
+df_Cairns <- read.table("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/Completed_Location_CSVs/df_Cairns_completed.csv", header=T, sep=",", stringsAsFactors = T)
+
+df_Perth <- read.table("C:/Users/Andrea/Desktop/MDS/MVA/MVA_Project-main/Completed_Location_CSVs/df_Perth_completed.csv", header=T, sep=",", stringsAsFactors = T)
+
+```
+
+# Transform our df
+
+We need to transform all the variables into qualitative variables to transform the database into a transaction.
+
+### Brisbane
+
+```{r}
+
+# Evaporation
+quarts <- quantile(df_Brisbane$Evaporation, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Evaporation <- cut(df_Brisbane$Evaporation, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Sunshine
+quarts <- quantile(df_Brisbane$Sunshine, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Sunshine <- cut(df_Brisbane$Sunshine, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindGustSpeed
+quarts <- quantile(df_Brisbane$WindGustSpeed, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$WindGustSpeed <- cut(df_Brisbane$WindGustSpeed, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindSpeed9am
+quarts <- quantile(df_Brisbane$WindSpeed9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$WindSpeed9am <- cut(df_Brisbane$WindSpeed9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindSpeed3pm
+quarts <- quantile(df_Brisbane$WindSpeed3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$WindSpeed3pm <- cut(df_Brisbane$WindSpeed3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Humidity9am
+quarts <- quantile(df_Brisbane$Humidity9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Humidity9am <- cut(df_Brisbane$Humidity9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Humidity3pm
+quarts <- quantile(df_Brisbane$Humidity3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Humidity3pm <- cut(df_Brisbane$Humidity3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Pressure9am
+quarts <- quantile(df_Brisbane$Pressure9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Pressure9am <- cut(df_Brisbane$Pressure9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Pressure3pm
+quarts <- quantile(df_Brisbane$Pressure3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Pressure3pm <- cut(df_Brisbane$Pressure3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Cloud9am
+quarts <- quantile(df_Brisbane$Cloud9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Cloud9am <- cut(df_Brisbane$Cloud9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Cloud3pm
+quarts <- quantile(df_Brisbane$Cloud3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Cloud3pm <- cut(df_Brisbane$Cloud3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Temp9am
+quarts <- quantile(df_Brisbane$Temp9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Temp9am <- cut(df_Brisbane$Temp9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Temp3pm
+quarts <- quantile(df_Brisbane$Temp3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Brisbane$Temp3pm <- cut(df_Brisbane$Temp3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+new_df_Brisbane <- df_Brisbane[c("Date","Evaporation","Sunshine", "WindGustDir", "WindGustSpeed", "WindDir9am", "WindDir3pm", "WindSpeed9am", "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "RainToday", "RainTomorrow", "Season")]
+
+
+```
+
+### Cairns
+
+```{r}
+
+# Evaporation
+quarts <- quantile(df_Cairns$Evaporation, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Evaporation <- cut(df_Cairns$Evaporation, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Sunshine
+quarts <- quantile(df_Cairns$Sunshine, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Sunshine <- cut(df_Cairns$Sunshine, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindGustSpeed
+quarts <- quantile(df_Cairns$WindGustSpeed, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$WindGustSpeed <- cut(df_Cairns$WindGustSpeed, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindSpeed9am
+quarts <- quantile(df_Cairns$WindSpeed9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$WindSpeed9am <- cut(df_Cairns$WindSpeed9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindSpeed3pm
+quarts <- quantile(df_Cairns$WindSpeed3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$WindSpeed3pm <- cut(df_Cairns$WindSpeed3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Humidity9am
+quarts <- quantile(df_Cairns$Humidity9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Humidity9am <- cut(df_Cairns$Humidity9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Humidity3pm
+quarts <- quantile(df_Cairns$Humidity3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Humidity3pm <- cut(df_Cairns$Humidity3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Pressure9am
+quarts <- quantile(df_Cairns$Pressure9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Pressure9am <- cut(df_Cairns$Pressure9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Pressure3pm
+quarts <- quantile(df_Cairns$Pressure3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Pressure3pm <- cut(df_Cairns$Pressure3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Cloud9am
+quarts <- quantile(df_Cairns$Cloud9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Cloud9am <- cut(df_Cairns$Cloud9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Cloud3pm
+quarts <- quantile(df_Cairns$Cloud3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Cloud3pm <- cut(df_Cairns$Cloud3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Temp9am
+quarts <- quantile(df_Cairns$Temp9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Temp9am <- cut(df_Cairns$Temp9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Temp3pm
+quarts <- quantile(df_Cairns$Temp3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Cairns$Temp3pm <- cut(df_Cairns$Temp3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+new_df_Cairns <- df_Cairns[c("Date","Evaporation","Sunshine", "WindGustDir", "WindGustSpeed", "WindDir9am", "WindDir3pm", "WindSpeed9am", "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "RainToday", "RainTomorrow", "Season")]
+
+
+```
+
+### Perth
+
+```{r}
+
+# Evaporation
+quarts <- quantile(df_Perth$Evaporation, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Evaporation <- cut(df_Perth$Evaporation, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Sunshine
+quarts <- quantile(df_Perth$Sunshine, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Sunshine <- cut(df_Perth$Sunshine, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindGustSpeed
+quarts <- quantile(df_Perth$WindGustSpeed, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$WindGustSpeed <- cut(df_Perth$WindGustSpeed, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindSpeed9am
+quarts <- quantile(df_Perth$WindSpeed9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$WindSpeed9am <- cut(df_Perth$WindSpeed9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# WindSpeed3pm
+quarts <- quantile(df_Perth$WindSpeed3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$WindSpeed3pm <- cut(df_Perth$WindSpeed3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Humidity9am
+quarts <- quantile(df_Perth$Humidity9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Humidity9am <- cut(df_Perth$Humidity9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Humidity3pm
+quarts <- quantile(df_Perth$Humidity3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Humidity3pm <- cut(df_Perth$Humidity3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Pressure9am
+quarts <- quantile(df_Perth$Pressure9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Pressure9am <- cut(df_Perth$Pressure9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Pressure3pm
+quarts <- quantile(df_Perth$Pressure3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Pressure3pm <- cut(df_Perth$Pressure3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Cloud9am
+quarts <- quantile(df_Perth$Cloud9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Cloud9am <- cut(df_Perth$Cloud9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Cloud3pm
+quarts <- quantile(df_Perth$Cloud3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Cloud3pm <- cut(df_Perth$Cloud3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Temp9am
+quarts <- quantile(df_Perth$Temp9am, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Temp9am <- cut(df_Perth$Temp9am, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+# Temp3pm
+quarts <- quantile(df_Perth$Temp3pm, na.rm = T) + c(-1, 0, 0, 0, +1)
+df_Perth$Temp3pm <- cut(df_Perth$Temp3pm, quarts, 
+                  labels = c("veryLow","low","high","veryHigh"))
+
+new_df_Perth <- df_Perth[c("Date","Evaporation","Sunshine", "WindGustDir", "WindGustSpeed", "WindDir9am", "WindDir3pm", "WindSpeed9am", "WindSpeed3pm", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "RainToday", "RainTomorrow", "Season")]
+
+
+```
+
+# Association Rules: Brisbane
+
+```{r}
+
+tt_Brisbane <- as(new_df_Brisbane, "transactions")
+
+rules <- apriori(tt_Brisbane, parameter = list(support=0.05, confidence=0.7, maxlen = 5))
+
+rules
+summary(rules)
+
+# LETS FIND THE FREQUENT ITEMSETS
+  
+fsets <- unique(generatingItemsets(rules))
+fsets.df <- as(fsets, "data.frame")
+sor.fsets <- fsets.df[order(-fsets.df$support),]
+sor.fsets[1:5, ]
+
+# LETS INSPECT THE RULES HAVING RHS RainTomorrow
+
+rules_RainTomorrow <- subset(rules, subset = rhs %in% "RainTomorrow=Yes")
+sorted_rules_RainTomorrow <- sort(rules_RainTomorrow, by="lift") 
+inspect(sorted_rules_RainTomorrow[1:5])
+
+
+```
+We find that the frequent items of the transactions are {RainTomorrow=No}, {RainToday=No}, {RainToday=No, RainTomorrow=No}, which tells us that Brisbane is a place with low rainfall and we can find lots of days in which it does not rain and the day after either. Then we have also a very frequent itemset that is {WindSpeed9am=low, RainToday=No} and {WindSpeed9am=low, RainTomorrow=No}, this means that we will find that the days that have low wind speed are also days where it does not rain today or tomorrow. 
+
+If we sort the rules by the lift, and we filter that the RSH is RainTomorrow=Yes, we get that it will rain tomorrow if:
+- We have very high humidity and a very cloudy sky at 3 in the afternoon.
+- We have a very low sun indicator, high humidity, and a very cloudy sky at 3 in the afternoon.
+- We have a very low sun indicator, high humidity, and a very cloudy sky in the afternoon.
+- We have high humidity and a very cloudy sky in the afternoon.
+- We have high humidity in the morning and a very cloudy sky in the afternoon. 
+
+# Association Rules: Cairns
+
+```{r}
+
+tt_Cairns <- as(new_df_Cairns, "transactions")
+
+rules <- apriori(tt_Cairns, parameter = list(support=0.05, confidence=0.7, maxlen = 10))
+
+rules
+summary(rules)
+
+# LETS FIND THE FREQUENT ITEMSETS
+  
+fsets <- unique(generatingItemsets(rules))
+fsets.df <- as(fsets, "data.frame")
+sor.fsets <- fsets.df[order(-fsets.df$support),]
+sor.fsets[1:5, ]
+
+# LETS INSPECT THE RULES HAVING RHS RainTomorrow
+
+rules_RainTomorrow <- subset(rules, subset = rhs %in% "RainTomorrow=Yes")
+sorted_rules_RainTomorrow <- sort(rules_RainTomorrow, by="lift") 
+inspect(sorted_rules_RainTomorrow[1:5])
+
+
+```
+We find that the frequent items of the transactions are {RainToday=No, RainTomorrow=No} {RainTomorrow=No, Season=dry}, {RainToday=No, Season=dry}, {RainToday=No, RainTomorrow=No, Season=dry} which tells us that if today does not rain in Cairns tomorrow either, and if it does not rain today or tomorrow it might be because we are in the dry season (which makes total sense). Then we have also a frequent itemset that is {Cloud3pm=veryLow, RainTomorrow=No}, this means that we will find that the days that do not have a cloudy sky in the afternoon are also days where it does not rain tomorrow. 
+
+If we sort the rules by the lift, and we filter that the RSH is RainTomorrow=Yes, we get that it will rain tomorrow if:
+- We have a very low sun indicator, high humidity, it has rained today and the season is wet.
+- We have a very low sun indicator, not windy in the afternoon, high humidity and it has rained today.
+- We have a very low sun indicator, high humidity, a very cloudy sky in the afternoon, and the season is wet.
+- We have a very low sun indicator, high humidity, and a very cloudy sky in the afternoon.
+- We have a very low sun indicator, high humidity, and the season is wet.
+
+# Association Rules: Perth
+
+```{r}
+
+tt_Perth <- as(new_df_Perth, "transactions")
+
+rules <- apriori(tt_Perth, parameter = list(support=0.05, confidence=0.7, maxlen = 10))
+
+rules
+summary(rules)
+
+# LETS FIND THE FREQUENT ITEMSETS
+  
+fsets <- unique(generatingItemsets(rules))
+fsets.df <- as(fsets, "data.frame")
+sor.fsets <- fsets.df[order(-fsets.df$support),]
+sor.fsets[1:5, ]
+
+# LETS INSPECT THE RULES HAVING RHS RainTomorrow
+
+rules_RainTomorrow <- subset(rules, subset = rhs %in% "RainTomorrow=Yes")
+sorted_rules_RainTomorrow <- sort(rules_RainTomorrow, by="lift") 
+inspect(sorted_rules_RainTomorrow[1:5])
+
+
+```
+
+We find that the frequent items of the transactions are {RainToday=No} {RainTomorrow=No}, {RainToday=No, RainTomorrow=No}, which tells us that Perth is a place with low rainfall and we can find lots of days in which it does not rain and the day after either. Then we have also a frequent itemset that is {Cloud9am=veryLow, RainToday=No} and {Cloud9am=veryLow, RainTomorrow=No}, this means that we will find that the days that have not a cloudy sky in the mornings are also days where it does not rain today or tomorrow.
+
+If we sort the rules by the lift, and we filter that the RSH is RainTomorrow=Yes, we get that it will rain tomorrow if:
+- We have a very low sun indicator, high humidity and low temperature in the afternoon, and it has rained today.
+- We have a very low sun indicator and high wind.
+- We have a very low sun indicator, high humidity, and and it has rained today.
+- We have a very low sun indicator, high humidity in the afternoon, and low pressure in the morning.
+- We have a very low sun indicator, high humidity in the afternoon, and low temperature in the afternoon.
+
+# Conclusion
+
+All the rules we get from all the countries we have in common that if for one day we get indicators of very high humidity, cloudy day, low level sun, low temperature, and it has rained today, the most frequent it will be to have rain tomorrow.
+

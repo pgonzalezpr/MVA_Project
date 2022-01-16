@@ -3,10 +3,12 @@ title: "Train Test Split"
 author: "Kat Weissman"
 date: "11/6/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
-
+library(dplyr)
 ```
 
 
@@ -19,6 +21,23 @@ dfB <- read.csv("Completed_Location_CSVs/df_Brisbane_completed.csv", stringsAsFa
 dfP$Date <- as.Date(dfP$Date)
 dfC$Date <- as.Date(dfC$Date)
 dfB$Date <- as.Date(dfB$Date)
+
+#sort by date
+dfP <- dfP %>% arrange(Date)
+dfC <- dfC %>% arrange(Date)
+dfB <- dfB %>% arrange(Date)
+
+#create AccuTomorrow factor
+accuRainP <- cut(dfP$Rainfall, breaks = c(-1,0.0001,1,15,500), labels = c('NoRain','Mist','Rain','HeavyRain'), include.lowest = TRUE, right = FALSE)
+accuRainC <- cut(dfC$Rainfall, breaks = c(-1,0.0001,1,15,500), labels = c('NoRain','Mist','Rain','HeavyRain'))
+accuRainB <- cut(dfB$Rainfall, breaks = c(-1,0.0001,1,15,500), labels = c('NoRain','Mist','Rain','HeavyRain'))
+
+table(accuRainP); table(accuRainC); table(accuRainB)
+
+dfP$accuRain <- factor(c(accuRainP[2:length(accuRainP)], factor(ifelse( dfP[ nrow(dfP) ,'RainTomorrow' ] == 'No', 'NoRain', 'Rain'), levels = c('NoRain') ) ), levels = c('1','2','3','4'), labels = c('NoRain','Mist','Rain','HeavyRain') )
+dfC$accuRain <- factor(c(accuRainC[2:length(accuRainC)], factor(ifelse( dfC[ nrow(dfC) ,'RainTomorrow' ] == 'No', 'NoRain', 'Rain'), levels = c('NoRain') ) ), levels = c('1','2','3','4'), labels = c('NoRain','Mist','Rain','HeavyRain') )
+dfB$accuRain <- factor(c(accuRainB[2:length(accuRainB)], factor(ifelse( dfB[ nrow(dfB) ,'RainTomorrow' ] == 'No', 'NoRain', 'Rain'), levels = c('NoRain') ) ), levels = c('1','2','3','4'), labels = c('NoRain','Mist','Rain','HeavyRain') )
+
 ```
 
 For validation of the model, it is necessary to divide the time series sequentially.
