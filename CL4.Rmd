@@ -1,0 +1,285 @@
+---
+pdf_document:
+  latex_engine: xelatex
+  includes:
+    in_header: C:/Users/Diana Rocio/Documents/R/win-library/4.1/summarytools/includes/fig-valign.tex
+header-includes:
+- \usepackage{multirow}
+- \usepackage{longtable}
+title: 'Group 1: Multivariate analysis of australian climate data'
+output: pdf_document
+---
+
+
+```{r setup, message=FALSE, warning=FALSE, results=FALSE,include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# CLEARING ENVIRONMENT #
+rm(list=ls(all=TRUE))
+
+
+#INSTALL & LOAD LIBRARIES
+# Required packages
+pkgs<-c("cluster","colorspace","dplyr","factoextra","fpc","ggplot2","ggpubr",
+        "NbClust","patchwork","reshape2","stats","summarytools","tidyr","tidyverse","rstudioapi")
+
+# Non-installed packages
+inspkgs<-pkgs[!pkgs %in% installed.packages()]
+for(libs in inspkgs) install.packages(libs, repos = "http://cran.us.r-project.org")
+
+# Loading required
+sapply(pkgs,require,character=TRUE)
+```
+
+## Data input
+
+To perform the clustering analysis are used the original datasets (numeric variables) for Brisbane, Perth and Cairns.
+
+```{r pressure, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+# Loading dataset
+load('BrisbaneMFA.RData')
+dfBrisbane<-df
+dfMFABrisbane<-df_MFA
+#EigValMFABrisbane<-eig.val
+#groupMFABrisbane<-group
+#quali.varMFABrisbane<-quali.var
+#quanti.varMFABrisbane<-quanti.var
+#resMFABrisbane<-get_mfa_ind(res.mfa)
+#coordMFABrisbane<-data.frame(resMFABrisbane$coord)
+
+load('CairnsMFA.RData')
+dfCairns<-df
+dfMFACairns<-df_MFA
+#resMFACairns<-get_mfa_ind(res.mfa)
+#coordMFACairns<-data.frame(resMFACairns$coord)
+
+load('PerthMFA.RData')
+dfPerth<-df
+dfMFAPerth<-df_MFA
+#resMFAPerth<-get_mfa_ind(res.mfa)
+#coordMFAPerth<-data.frame(resMFAPerth$coord)
+
+originaldata<-list(dfMFABrisbane,dfMFAPerth,dfMFACairns)
+funum <- function(x){nums<-unlist(lapply(x, is.numeric))
+                     x[ , nums]}
+names(originaldata)<-c("Brisbane","Perth","Cairns")
+
+
+orNUMdata<-lapply(originaldata,funum)
+names(orNUMdata)<-c("Brisbane","Perth","Cairns")
+
+Scaled<-lapply(orNUMdata,as.data.frame(scale))
+str(Scaled)
+names(Scaled)<-c("ScaledBrisbane","ScaledPerth","ScaledCairns")
+
+funames<-function(x){ tmp_df<-x
+                      colnames(tmp_df)<-c("WindGustSpeed","WindSpeed9am","WindSpeed3pm",
+                                    "MinTemp","MaxTemp","TempRange","Temp9am","Temp3pm",
+                                    "Evaporation","Sunshine","Cloud9am","Cloud3pm",
+                                    "Rainfall","Humidity9am","Humidity3pm",
+                                    "Pressure9am","Pressure3pm")
+                    return(tmp_df)}
+scaled<-lapply(Scaled, funames)
+Scaled<-scaled
+
+listall<-list(orNUMdata$Brisbane,Scaled$ScaledBrisbane,orNUMdata$Perth,Scaled$ScaledPerth,orNUMdata$Cairns,Scaled$ScaledCairns)
+names(listall)<-c("Brisbane","ScaledBrisbane","Perth","ScaledPerth","Cairns","ScaledCairns")
+str(listall)
+
+
+set.seed(2021)
+```
+
+###  Clustering Analysis
+
+In order to analyze if data presents patterns of association are it is performed a clustering analysis. For this purpose, all incomplete cases remaining are removed and as a first step, the optimal number of clusters are estimated through direct methods: elbow, average silhouette and ASM to choose the most common value of optimal clusters.
+
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold", out.width="50%", results=FALSE}
+par(mar = c(4,4,.1,.1))
+fun01<-function(x){ tmp_df = listall[[x]]
+                    tmp_name = names(listall)[x]
+                    fviz_nbclust(tmp_df, kmeans, method = "wss") + 
+                    geom_vline(xintercept = 4, linetype = 2) + 
+                    labs(subtitle = paste("Elbow method",tmp_name))}
+fun02<-function(x){ tmp_df = listall[[x]]
+                    tmp_name = names(listall)[x]
+                    fviz_nbclust(tmp_df, kmeans, method = "silhouette") + 
+                    geom_vline(xintercept = 4, linetype = 2) + 
+                    labs(subtitle = paste("Elbow method",tmp_name))}
+fun03<-function(x){ tmp_df = listall[[x]]
+                    tmp_name = names(listall)[x]
+                    fviz_nbclust(tmp_df, kmeans, method = "gap_stat") +
+                    geom_vline(xintercept = 4, linetype = 2) + 
+                    labs(subtitle = paste("Elbow method",tmp_name))}
+
+wss<-lapply(1:length(listall),fun01)
+wss
+
+silhouette<-lapply(1:length(listall),fun02)
+silhouette
+
+#Gaps<-lapply(1:length(listall),fun03)
+#Gaps
+```
+Given the results provided by the methods, it can be concluded the clustering can be performed with 4 cluster for all the dataset, the original numerical variables and the coordinates of the performed MCA.
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold", out.width="50%", results=FALSE}
+funVizKm<- function(i){ tmp_df = listall[[i]];
+                        tmp_kmeans = kmeans(x = listall[[i]], centers = 4)
+                        tmp_name = names(listall)[i]
+                        fviz_cluster(object = tmp_kmeans, data = listall[[i]], 
+                                     show.clust.cent = TRUE, ellipse.type = "euclid",
+                                     star.plot = TRUE, repel = TRUE) + 
+                     theme_bw() + theme(legend.position = "none") + 
+                          labs(title = paste("Results clustering K-means (4 clusters)",
+                                             tmp_name))}  
+
+VizKmeans<-lapply(1:length(listall),funVizKm) 
+VizKmeans
+
+```
+```{r, message=FALSE, warnings=FALSE, fig.show="hold"}
+funKm<- function(i){ tmp_df = listall[[i]];
+                     tmp_kmeans = kmeans(x = listall[[i]], centers = 4)
+                     listall[[i]]<-add_column(listall[[i]], KmeansCluster = 
+                                                tmp_kmeans$cluster)}
+
+Kmeans<-lapply(1:length(listall),funKm)
+names(Kmeans)<-c("Brisbane","ScaledBrisbane","Perth","ScaledPerth",
+                 "Cairns","ScaledCairns")
+
+#a<-Kmeans[[1]]
+
+#fun08<-function(a,i) {
+#  for (i in 1:17) {boxplot(a[,i] ~ a[,18], xlab = 'Kmeans', ylab = names(a)[i])}}
+
+#lapply(Kmeans,fun08)
+
+#boxplot(a[,1] ~ a[,18])
+#boxplot(a[,2] ~ a[,18])
+
+#boxplot(a)
+
+#plot(formula = KmeansCluster ~ ., data = a)
+
+
+lapply(1:length(Kmeans), function(x){
+
+  # Get the dataframe and the name 
+  tmp_df = Kmeans[[x]]
+  tmp_name = names(Kmeans)[x]
+  
+  for (i in 1:17) {boxplot(tmp_df[,i] ~ tmp_df[,18], xlab = 'Kmeans',
+                           ylab = names(tmp_df)[i], main = tmp_name)}
+  })
+
+
+```
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold", out.width="50%", results=FALSE}
+fun04<-function(x) print(names(x))
+lapply(Kmeans, fun04)
+
+fun05<-function(x){x[,ncol(x)]
+                   x$KMCluster<-x[,ncol(x)]
+                   return(x$KMCluster)}
+
+clusters<-lapply(Kmeans,fun05)
+
+BrisbaneClusters<-as.data.frame(cbind(originaldata[[1]],as.factor(clusters[[1]]),
+                                      as.factor(clusters[[2]])))
+names(BrisbaneClusters)<-c(names(originaldata[[1]]),"KmeansDF","KmeansScaled")
+
+PerthClusters<-as.data.frame(cbind(originaldata[[2]],as.factor(clusters[[3]]),
+                                   as.factor(clusters[[4]])))
+
+names(PerthClusters)<-c(names(originaldata[[3]]),"KmeansDF","KmeansScaled")
+
+CairnsClusters<-as.data.frame(cbind(originaldata[[3]],as.factor(clusters[[5]]),
+                                    as.factor(clusters[[6]])))
+names(CairnsClusters)<-c(names(originaldata[[3]]),"KmeansDF","KmeansScaled")
+
+
+
+funMetrics<-function(i){ tmp_df = listall[[i]]
+
+                     }
+lapply(1:length(listall), funMetrics)
+
+
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+write.csv(BrisbaneClusters,"BrisbaneClusters.csv")
+write.csv(PerthClusters,"PerthClusters.csv")
+write.csv(CairnsClusters,"CairnsClusters.csv")
+
+DFClusters<-list(BrisbaneClusters,PerthClusters,CairnsClusters)
+
+
+fun06<-function(x){tmpdf=DFClusters[[x]]
+                   levels(tmpdf[,24])<-list(C1="1",C2="2",C3="3",C4="4")
+                   levels(tmpdf[,25])<-list(G1="1",G2="2",G3="3",G4="4")
+                   return(tmpdf)}
+data<-lapply(1:length(DFClusters),fun06)
+
+```
+
+
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold"}
+funtableKmeans<-function(x){table(x$KmeansDF,x$KmeansScaled)}
+funtabseason<-function(x){table(x$KmeansDF,x$Season) }
+funtabseason2<-function(x){table(x$KmeansScaled,x$Season) }
+funtabseason2<-function(x){table(x$KmeansScaled,x$RainTomorrow) }
+
+lapply(data, funtableKmeans)
+lapply(data,funtabseason)
+lapply(data,funtabseason2)
+
+```
+
+
+
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold"}
+#boxplot(BrisbaneClusters$Pressure9am ~ BrisbaneClusters$KmeansDF)
+
+funtableKmeans<-function(x){table(x$KmeansDF,x$KmeansScaled)}
+funtabseason<-function(x){table(x$KmeansDF,x$Season) }
+funtabseason2<-function(x){table(x$KmeansScaled,x$Season) }
+funtabseason2<-function(x){table(x$KmeansScaled,x$Season) }
+
+lapply(data, funtableKmeans)
+lapply(data,funtabseason)
+lapply(data,funtabseason2)
+
+```
+
+
+
+```{r, message=FALSE, warnings=FALSE, fig.show="hold"}
+kruskal.test(Kmeans$Brisbane$Rainfall ~ Kmeans$Brisbane$KmeansCluster, data = Kmeans$Brisbane)
+kruskal.test(Kmeans$Perth$Rainfall ~ Kmeans$Perth$KmeansCluster, data = Kmeans$Perth)
+kruskal.test(Kmeans$Cairns$Rainfall ~Kmeans$Cairns$KmeansCluster, data = Kmeans$Cairns)
+
+
+
+# As the p-value is less than the significance level 0.05, we can conclude that there are significant differences between groups in relation to "Murder".
+
+#From the output of the Kruskal-Wallis test, we know that there is a significant difference between groups, but we don’t know which pairs of groups are different.
+
+pairwise.wilcox.test(Kmeans$Brisbane$Rainfall,Kmeans$Brisbane$KmeansCluster, p.adjust.method = "BH")
+pairwise.wilcox.test(Kmeans$Perth$Rainfall,Kmeans$Perth$KmeansCluster, p.adjust.method = "BH")
+pairwise.wilcox.test(Kmeans$Cairns$Rainfall,Kmeans$Cairns$KmeansCluster, p.adjust.method = "BH")
+
+
+
+funProfile<-function(x){catdes(x, num.var=18, prob = 0.01)
+                        catdes(x, num.var=19, prob = 0.01)}
+
+
+#lapply(temp,funProfile)
+```
