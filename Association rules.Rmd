@@ -307,7 +307,7 @@ inspect(sorted_rules_RainTomorrow[1:5])
 
 
 ```
-We find that the frequent items of the transactions are {RainTomorrow=No}, {RainToday=No}, {RainToday=No, RainTomorrow=No}, which tells us that Brisbane is a place with low rainfall and we can find lots of days in which it does not rain and the day after either. Then we have also a very frequent itemset that is {WindSpeed9am=low, RainToday=No} and {WindSpeed9am=low, RainTomorrow=No}, this means that we will find that the days that have low wind speed are also days where it does not rain today or tomorrow. 
+We find that the frequent items of the transactions are {RainTomorrow=No}, {RainToday=No}, {RainToday=No, RainTomorrow=No}, which tells us that we can find lots of days in which it does not rain and the day after either. Then we have also a very frequent itemset that is {WindSpeed9am=low, RainToday=No} and {WindSpeed9am=low, RainTomorrow=No}, this means that we will find that the days that have low wind speed are also days where it does not rain today or tomorrow. 
 
 If we sort the rules by the lift, and we filter that the RSH is RainTomorrow=Yes, we get that it will rain tomorrow if:
 - We have very high humidity and a very cloudy sky at 3 in the afternoon.
@@ -389,5 +389,5 @@ If we sort the rules by the lift, and we filter that the RSH is RainTomorrow=Yes
 
 # Conclusion
 
-All the rules we get from all the countries we have in common that if for one day we get indicators of very high humidity, cloudy day, low level sun, low temperature, and it has rained today, the most frequent it will be to have rain tomorrow.
+All the rules, that we get from all the countries, have in common that if for one day we get indicators of very high humidity, cloudy day, low level of sun, low temperature, or it has rained today, the most frequent it will be to have rain tomorrow.
 
