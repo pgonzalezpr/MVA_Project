@@ -19,6 +19,9 @@ library(MASS)
 library(mda)
 library(klaR)
 library(car)
+library(gridExtra)
+library(ggplot2)
+library(lattice)
 
 # Load the data
 Ptrain <- read.csv("Train_Test_CSVs/df_Perth_train.csv", stringsAsFactors = T)
@@ -34,6 +37,13 @@ Btrain$Date <- as.Date(Btrain$Date)
 Btest$Date <- as.Date(Btest$Date)
 Ctrain$Date <- as.Date(Ctrain$Date)
 Ctest$Date <- as.Date(Ctest$Date)
+
+levels(Ptrain$accuRain) <- c('HeavyRain','NoRain','NoRain','Rain')
+levels(Ptest$accuRain) <- c('HeavyRain','NoRain','NoRain','Rain')
+levels(Btrain$accuRain) <- c('HeavyRain','NoRain','NoRain','Rain')
+levels(Btest$accuRain) <- c('HeavyRain','NoRain','NoRain','Rain')
+levels(Ctrain$accuRain) <- c('HeavyRain','NoRain','NoRain','Rain')
+levels(Ctest$accuRain) <- c('HeavyRain','NoRain','NoRain','Rain')
 ```
 
 # Preprocessing and checking data
@@ -43,13 +53,13 @@ Testing Gaussian conditions with Shapiro-Wilk test for each variable
 
 ```{r}
 names(Ptrain)
-datos_tidy <- melt(Ptrain, id.vars = c("Date","RainTomorrow"), measure.vars = c( "Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
+datos_tidy <- melt(Ptrain, id.vars = c("Date","accuRain"), measure.vars = c( "Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "WindSpeed3pm", 
                                                                "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", 
                                                                "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
                                                                "MaxTemp", "MinTemp", "Rainfall"),
                    value.name = "value")
 
-kable(datos_tidy %>% group_by(RainTomorrow, variable) %>% summarise(p_value_Shapiro.test = round(shapiro.test(value)$p.value,5)))
+kable(datos_tidy %>% group_by(accuRain, variable) %>% summarise(p_value_Shapiro.test = round(shapiro.test(value)$p.value,5)))
 ```
 
 Normality does not hold for most variables and combinations.
@@ -57,8 +67,16 @@ Normality does not hold for most variables and combinations.
 ```{r}
 # Covariance Conditions
 df_num <- Ptrain[,unlist(lapply(Ptrain, is.numeric))] 
-df_num <- cbind(Ptrain[,"RainTomorrow"],df_num)
-boxM(data = df_num[,-c(1,2,3,4)], grouping = df_num[,1])
+df_num <- cbind(Ptrain[,"accuRain"],df_num[,-c(1,2,3,4)])
+
+# Checking for Multivariate Gaussian Conditions 
+royston_test <- mvn(data = df_num[,-1], mvnTest = "royston", multivariatePlot = "qq")
+royston_test$multivariateNormality
+hz_test <- mvn(data = iris[,-5], mvnTest = "hz")
+hz_test$multivariateNormality
+
+# Checking for covariances by group
+boxM(data = df_num[,-1], grouping = df_num[,1])
 ```
 
 We fail to reject Box' M-test's null hypothesis, for which it seems that our data has equal covariance.
@@ -92,7 +110,7 @@ modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "
 
 model <- lda(accuRain~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
 model
-plot(model)
+ 
 ```
 
 ```{r}
@@ -103,6 +121,24 @@ predictions$classBin <- as.factor(ifelse(predictions$class %in% c('NoRain','Mist
 predictions$posterior
 predictions$x
 ### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+
+class_prob <- cbind(predictions$posterior, raintype = predictions$class)
+
+
+melt_prob <- data.frame(rbind(class_prob[class_prob[,4] == 1,c(1,4)], 
+      class_prob[class_prob[,4] == 2,c(2,4)],
+      class_prob[class_prob[,4] == 3,c(3,4)],
+      class_prob[class_prob[,4] == 4,c(4,4)]))
+names(melt_prob) <- c('prob','raintype')
+melt_prob$raintype <- factor(melt_prob$raintype, labels = c('HeavyRain','NoRain','Rain'))
+melt_prob$raintype <- factor(melt_prob$raintype, levels = c('NoRain','Rain','HeavyRain'))
+
+#build prob graph
+group.colors <- c(NoRain = "#FF8C33", Rain = "#5BA4E2", HeavyRain ="#3B57B9")
+perth_LDA <- ggplot(melt_prob, aes(x = raintype, y = prob, group = raintype, fill = raintype)) + 
+  geom_violin() + scale_fill_manual(values=group.colors) + ggtitle("Perth")
+
+
 ```
 
 ```{r}
@@ -114,7 +150,7 @@ Error <- mean(test.transformed$accuRain != predictions$class) * 100;Error
 
 
 confusionMatrix(predictions$class, test.transformed$accuRain, positive = "Yes")
-confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
+Perth_results <- confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
 ```
 
 
@@ -137,9 +173,9 @@ modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "
                                                                "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
                                                                "MaxTemp", "MinTemp", "Rainfall", "Season")
 
-model <- lda(accuRain~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
+model <- lda(RainTomorrow~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
 model
-plot(model)
+ 
 ```
 
 ```{r}
@@ -150,18 +186,31 @@ predictions$classBin <- as.factor(ifelse(predictions$class %in% c('NoRain','Mist
 predictions$posterior
 predictions$x
 ### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+
+class_prob <- cbind(predictions$posterior, raintype = predictions$class)
+
+
+melt_prob <- data.frame(rbind(class_prob[class_prob[,3] == 1,c(1,3)], 
+                              class_prob[class_prob[,3] == 2,c(2,3)]) )
+names(melt_prob) <- c('prob','raintype')
+melt_prob$raintype <- factor(melt_prob$raintype, labels = c('NoRain','Rain'))
+melt_prob$raintype <- reorder(melt_prob$raintype, new.order=c(1,2))
+
+#build prob graph
+group.colors <- c(NoRain = "#FF8C33", Rain = "#5BA4E2")
+cairns_LDA <- ggplot(melt_prob, aes(x = raintype, y = prob, group = raintype, fill = raintype)) + 
+  geom_violin() + scale_fill_manual(values=group.colors) + ggtitle("Cairns"); brisbane_LDA
 ```
 
 ```{r}
-mean(predictions$class==test.transformed$accuRain)
-table(test.transformed$accuRain, predictions$class, dnn = c("Actual Class", "Predicted Class"))
-Error <- mean(test.transformed$accuRain != predictions$class) * 100;Error
+mean(predictions$class==test.transformed$RainTomorrow)
+table(test.transformed$RainTomorrow, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$RainTomorrow != predictions$class) * 100;Error
 
 
 
 
-confusionMatrix(predictions$class, test.transformed$accuRain, positive = "Yes")
-confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
+Cairns_results <- confusionMatrix(predictions$class, test.transformed$RainTomorrow, positive = "Yes")
 ```
 
 
@@ -183,9 +232,9 @@ modeling_vars <- c("Evaporation", "Sunshine", "WindGustSpeed", "WindSpeed9am", "
                                                                "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm", "TempRange", 
                                                                "MaxTemp", "MinTemp", "Rainfall", "Season")
 
-model <- lda(accuRain~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
+model <- lda(RainTomorrow~ Rainfall + Evaporation + WindGustSpeed + WindSpeed9am + WindSpeed3pm + Humidity9am + Humidity3pm + Pressure9am + Pressure3pm + Temp9am + Temp3pm +  MinTemp + Cloud9am + Cloud3pm + TempRange + Season, data = train.transformed)
 model
-plot(model)
+ 
 ```
 
 ```{r}
@@ -196,22 +245,43 @@ predictions$classBin <- as.factor(ifelse(predictions$class %in% c('NoRain','Mist
 predictions$posterior
 predictions$x
 ### or by using --> lda.pred <-  predict(object = model, newdata = test.transformed)
+
+class_prob <- cbind(predictions$posterior, raintype = predictions$class)
+
+
+melt_prob <- data.frame(rbind(class_prob[class_prob[,3] == 1,c(1,3)], 
+                              class_prob[class_prob[,3] == 2,c(2,3)]) )
+names(melt_prob) <- c('prob','raintype')
+melt_prob$raintype <- factor(melt_prob$raintype, labels = c('NoRain','Rain'))
+melt_prob$raintype <- reorder(melt_prob$raintype, new.order=c(1,2))
+
+#build prob graph
+group.colors <- c(NoRain = "#FF8C33", Rain = "#5BA4E2")
+brisbane_LDA <- ggplot(melt_prob, aes(x = raintype, y = prob, group = raintype, fill = raintype)) + 
+  geom_violin() + scale_fill_manual(values=group.colors) + ggtitle("Brisbane"); brisbane_LDA
 ```
 
 ```{r}
-mean(predictions$class==test.transformed$accuRain)
-table(test.transformed$accuRain, predictions$class, dnn = c("Actual Class", "Predicted Class"))
-Error <- mean(test.transformed$accuRain != predictions$class) * 100;Error
+mean(predictions$class==test.transformed$RainTomorrow)
+table(test.transformed$RainTomorrow, predictions$class, dnn = c("Actual Class", "Predicted Class"))
+Error <- mean(test.transformed$RainTomorrow != predictions$class) * 100;Error
 
 
 
 
-confusionMatrix(predictions$class, test.transformed$accuRain, positive = "Yes")
-confusionMatrix(predictions$classBin, test.transformed$RainTomorrow, positive = "Yes")
+Brisbane_results <- confusionMatrix(predictions$class, test.transformed$RainTomorrow, positive = "Yes")
 ```
 
 
 
+```{r}
+grid.arrange(ncol=2,  brisbane_LDA, cairns_LDA)
+
+Brisbane_results
+Perth_results
+Cairns_results
+
+```
 
 
 
@@ -289,7 +359,7 @@ Now, build the model
 
 model <- lda(Target~ . - Date, data = train.transformed)
 model
-plot(model)
+ 
 ```
 _The lda() outputs contain the following elements:_
 _- Prior probabilities of groups: the proportion of training observations in each group._
